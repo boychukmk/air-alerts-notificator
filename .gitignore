@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+*.session
+*.session-journal
+*.db
+*.log
+
+qr.png
+qr_fresh.png
+
+.env

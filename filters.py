@@ -1,0 +1,58 @@
+def build_active_keywords(config: dict):
+    region = config["regions"][config["active_region"]]
+    location_keywords = region["target_keywords"] + region["transit_keywords"]
+
+    threat_keywords = []
+    for _, t in config["threat_types"].items():
+        if t.get("enabled"):
+            threat_keywords.extend(t["keywords"])
+
+    return location_keywords, threat_keywords
+
+
+def build_other_region_keywords(config: dict):
+    """Explicit target_keywords of every region EXCEPT the active one — used to detect
+    'this message is clearly about a different city' and block cross-message combining."""
+    other = []
+    for name, region in config["regions"].items():
+        if name == config["active_region"]:
+            continue
+        other.extend(region["target_keywords"])
+    return other
+
+
+def _find_matches(text: str, keywords) -> list[str]:
+    lowered = text.lower()
+    return [kw for kw in keywords if kw in lowered]
+
+
+def classify_window(texts, location_keywords, threat_keywords, other_region_keywords):
+    """texts: recent messages from one channel, oldest first, current message last.
+
+    Priority 1: a single message containing BOTH a threat and our location keyword
+    always fires — even if it also mentions another city (real multi-target reports).
+
+    Priority 2: combine the whole window, but only if no message in it explicitly
+    names a different city — avoids stitching together unrelated posts.
+    """
+    lowered_texts = [t.lower() for t in texts]
+
+    for t in lowered_texts:
+        threats = [kw for kw in threat_keywords if kw in t]
+        locs = [kw for kw in location_keywords if kw in t]
+        if threats and locs:
+            return {"matched_threats": threats, "matched_location": locs, "combined": False}
+
+    conflict = any(
+        any(kw in t for kw in other_region_keywords) for t in lowered_texts
+    )
+    if conflict:
+        return None
+
+    combined = " ".join(lowered_texts)
+    threats = [kw for kw in threat_keywords if kw in combined]
+    locs = [kw for kw in location_keywords if kw in combined]
+    if threats and locs:
+        return {"matched_threats": threats, "matched_location": locs, "combined": True}
+
+    return None

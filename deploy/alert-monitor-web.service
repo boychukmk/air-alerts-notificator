@@ -1,0 +1,15 @@
+[Unit]
+Description=Alert monitor web UI
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/home/deploy/alert-monitor/webapp
+EnvironmentFile=/home/deploy/alert-monitor/.env
+ExecStart=/home/deploy/alert-monitor/venv/bin/uvicorn app:app --host 0.0.0.0 --port 8081
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
