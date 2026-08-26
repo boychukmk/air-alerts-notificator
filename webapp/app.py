@@ -146,7 +146,7 @@ input:checked + .slider:before{transform:translateX(20px)}
 
 .addbox{margin-top:10px; display:flex; gap:8px; padding:10px; align-items:center}
 .addbox input{
-  flex:1; font-size:15px; padding:12px 14px; color:var(--text); background:#0f1114;
+  flex:1; font-size:16px; padding:12px 14px; color:var(--text); background:#0f1114;
   border:1px solid var(--card-border); border-radius:10px; outline:none;
 }
 .addbox input:focus{border-color:var(--accent)}
@@ -171,7 +171,7 @@ input:checked + .slider:before{transform:translateX(20px)}
 .kw-chip .x{color:var(--muted); cursor:pointer; font-size:12px}
 .kw-add{display:flex; gap:8px}
 .kw-add input{
-  flex:1; font-size:14px; padding:10px 12px; color:var(--text); background:#0f1114;
+  flex:1; font-size:16px; padding:10px 12px; color:var(--text); background:#0f1114;
   border:1px solid var(--card-border); border-radius:8px; outline:none;
 }
 .kw-add button{
