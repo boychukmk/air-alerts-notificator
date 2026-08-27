@@ -13,7 +13,6 @@ from filters import classify_window
 from dedup import InMemoryDedup
 from notifier import send_alert_burst
 from storage import EventLog
-from window import ChannelWindowBuffer
 
 API_ID = int(os.environ["TG_API_ID"])
 API_HASH = os.environ["TG_API_HASH"]
@@ -113,7 +112,6 @@ async def main():
 
     dedup = InMemoryDedup(window_seconds=180)
     log = EventLog(os.path.join(os.path.dirname(__file__), "events.db"))
-    window = ChannelWindowBuffer(window_seconds=90, max_messages=5)
 
     client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
     background_tasks = set()
@@ -143,11 +141,13 @@ async def main():
         if dedup.is_duplicate(text):
             return
 
-        window_texts = window.add_and_get_window(chat_key, text)
-
+        # Cross-message combining ("Балістика" + separate "Курс на Київ") was tried
+        # and reverted — on busy channels it kept stitching together unrelated posts
+        # (e.g. a Poltava-only report + an unrelated nearby "Київ" mention), producing
+        # false alerts. Threat + location must now be in the SAME message.
         for region_key, region in live.enabled_regions.items():
             match = classify_window(
-                window_texts, region["location_keywords"], live.threat_keywords, region["other_region_keywords"]
+                [text], region["location_keywords"], live.threat_keywords, region["other_region_keywords"]
             )
             if not match:
                 continue
