@@ -134,11 +134,6 @@ select{
 .row:last-child{border-bottom:none}
 .row .label{font-size:15px}
 .row .label .sub{display:block; font-size:12px; color:var(--muted); margin-top:2px}
-.copyall{
-  width:100%; margin-top:10px; padding:12px; font-size:14px; font-weight:600; color:var(--text);
-  background:var(--card); border:1px solid var(--card-border); border-radius:12px;
-}
-.copyall:active{opacity:.7}
 
 .switch{position:relative; width:48px; height:28px; flex:none}
 .switch input{opacity:0; width:0; height:0}
@@ -183,6 +178,11 @@ input:checked + .slider:before{transform:translateX(20px)}
   flex:none; padding:10px 14px; font-size:13px; font-weight:600; color:#fff; border:none;
   border-radius:8px; background:linear-gradient(135deg, var(--accent), var(--accent2));
 }
+.copyall{
+  width:100%; margin-top:10px; padding:12px; font-size:14px; font-weight:600; color:var(--text);
+  background:var(--card); border:1px solid var(--card-border); border-radius:12px;
+}
+.copyall:active{opacity:.7}
 </style></head><body>
 <div class="wrap">
   <div class="topbar">
@@ -219,66 +219,62 @@ input:checked + .slider:before{transform:translateX(20px)}
 </div>
 
 <script>
-async function copyText(text, btn, restoreLabel){
-  let ok = false;
-  try {
-    await navigator.clipboard.writeText(text);
-    ok = true;
-  } catch (err) {
-    // navigator.clipboard requires a secure context (HTTPS); we're on plain HTTP
-    // over Tailscale, so fall back to the old execCommand trick.
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed'; ta.style.left = '-9999px';
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      ok = document.execCommand('copy');
-      document.body.removeChild(ta);
-    } catch (err2) {
-      ok = false;
-    }
-  }
-  if (btn) {
+function copyToClipboard(text, btn){
+  const originalLabel = btn.textContent;
+  function done(ok){
     btn.textContent = ok ? '✓ Скопійовано' : '✗ Не вдалося скопіювати';
-    setTimeout(() => { btn.textContent = restoreLabel; }, 1500);
+    setTimeout(function(){ btn.textContent = originalLabel; }, 1500);
   }
-  return ok;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ fallbackCopy(text, done); });
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, done){
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    done(ok);
+  } catch (e) {
+    done(false);
+  }
 }
 
 async function load(){
-  try {
-    await loadInner();
-  } catch (err) {
-    console.error('load() failed:', err);
-    document.getElementById('regions').innerHTML = '<div class="empty">Помилка завантаження: ' + err.message + '</div>';
-  }
-}
-
-async function loadInner(){
-  const r = await fetch('/api/state', {cache: 'no-store'});
+  const r = await fetch('/api/state');
   if (r.status === 401) { window.location = '/login'; return; }
   const s = await r.json();
 
   const regionsDiv = document.getElementById('regions');
   regionsDiv.innerHTML = '';
   for (const [key, r] of Object.entries(s.regions)) {
-    const row = toggleRow(r.label, r.enabled, (v) => setRegion(key, v));
-    if (r.ntfy_topic) {
+    const label = r.label + (r.enabled && r.ntfy_topic ? '' : '');
+    const row = toggleRow(label, r.enabled, (v) => setRegion(key, v));
+    if (r.enabled && r.ntfy_topic) {
       const sub = document.createElement('span');
-      sub.className = 'sub'; sub.textContent = r.ntfy_topic;
+      sub.className = 'sub'; sub.textContent = 'топік: ' + r.ntfy_topic;
       row.querySelector('.label').appendChild(sub);
     }
     regionsDiv.appendChild(row);
   }
 
   const copyAllBtn = document.getElementById('copyAllTopics');
-  const withTopics = Object.values(s.regions).filter(r => r.ntfy_topic);
-  copyAllBtn.style.display = withTopics.length ? 'block' : 'none';
-  copyAllBtn.onclick = () => {
-    const list = withTopics.map(r => `${r.label} — ${r.ntfy_topic}`).join('\n');
-    copyText(list, copyAllBtn, 'Скопіювати всі топіки');
-  };
+  const regionsWithTopics = Object.values(s.regions).filter(function(reg){ return reg.ntfy_topic; });
+  if (regionsWithTopics.length) {
+    copyAllBtn.style.display = 'block';
+    copyAllBtn.onclick = function(){
+      const lines = regionsWithTopics.map(function(reg){ return reg.label + ' — ' + reg.ntfy_topic; });
+      copyToClipboard(lines.join('\n'), copyAllBtn);
+    };
+  } else {
+    copyAllBtn.style.display = 'none';
+  }
 
   const threatsDiv = document.getElementById('threats');
   threatsDiv.innerHTML = '';
