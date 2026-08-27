@@ -133,7 +133,10 @@ select{
 }
 .row:last-child{border-bottom:none}
 .row .label{font-size:15px}
-.row .label .sub{display:block; font-size:12px; color:var(--muted); margin-top:2px}
+.row .label .sub{display:inline-block; font-size:12px; color:var(--muted); margin-top:2px}
+.topic-row{display:flex; align-items:center; gap:6px; margin-top:2px}
+.copy-btn{font-size:13px; cursor:pointer; padding:2px 4px; opacity:.8}
+.copy-btn:active{opacity:.5}
 
 .switch{position:relative; width:48px; height:28px; flex:none}
 .switch input{opacity:0; width:0; height:0}
@@ -221,11 +224,26 @@ async function load(){
   const regionsDiv = document.getElementById('regions');
   regionsDiv.innerHTML = '';
   for (const [key, r] of Object.entries(s.regions)) {
-    const label = r.label + (r.enabled && r.ntfy_topic ? '' : '');
-    const row = toggleRow(label, r.enabled, (v) => setRegion(key, v));
-    if (r.enabled && r.ntfy_topic) {
-      const sub = document.createElement('span');
-      sub.className = 'sub'; sub.textContent = 'топік: ' + r.ntfy_topic;
+    const row = toggleRow(r.label, r.enabled, (v) => setRegion(key, v));
+    if (r.ntfy_topic) {
+      const sub = document.createElement('div');
+      sub.className = 'topic-row';
+      const topicText = document.createElement('span');
+      topicText.className = 'sub'; topicText.textContent = r.ntfy_topic;
+      const copyBtn = document.createElement('span');
+      copyBtn.className = 'copy-btn'; copyBtn.textContent = '📋';
+      copyBtn.onclick = async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(r.ntfy_topic);
+          copyBtn.textContent = '✓';
+          setTimeout(() => { copyBtn.textContent = '📋'; }, 1200);
+        } catch (err) {
+          copyBtn.textContent = '✗';
+          setTimeout(() => { copyBtn.textContent = '📋'; }, 1200);
+        }
+      };
+      sub.appendChild(topicText); sub.appendChild(copyBtn);
       row.querySelector('.label').appendChild(sub);
     }
     regionsDiv.appendChild(row);
