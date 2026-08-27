@@ -26,6 +26,19 @@ def _find_matches(text: str, keywords) -> list[str]:
     return [kw for kw in keywords if kw in lowered]
 
 
+# A real-time launch/inbound-threat post is short and imperative ("Балістика на
+# Київ"). Long posts are almost always nightly summaries, situational recaps, or
+# "stay alert" advisories — genuine keyword hits, zero actionable urgency.
+MAX_ALERT_LENGTH = 200
+
+# Reassurance / all-clear phrasing ("жодна балістика не прямує", "відбій") still
+# contains the threat+location keywords but means the opposite of an alert.
+NEGATION_PATTERNS = [
+    "не прямує", "не летить", "не летять", "не зафіксован", "не підтвердж",
+    "відбій", "немає загроз", "загрози немає", "скасован", "хибн",
+]
+
+
 def classify_window(texts, location_keywords, threat_keywords, other_region_keywords):
     """texts: recent messages from one channel, oldest first, current message last.
 
@@ -35,7 +48,15 @@ def classify_window(texts, location_keywords, threat_keywords, other_region_keyw
     Priority 2: combine the whole window, but only if no message in it explicitly
     names a different city — avoids stitching together unrelated posts.
     """
-    lowered_texts = [t.lower() for t in texts]
+    # Drop long/negated messages BEFORE either check — otherwise a message
+    # rejected by the single-message loop still slips through via the combined
+    # fallback below, since that re-scans the same (unfiltered) text.
+    lowered_texts = [
+        t.lower() for t in texts
+        if len(t) <= MAX_ALERT_LENGTH and not any(p in t.lower() for p in NEGATION_PATTERNS)
+    ]
+    if not lowered_texts:
+        return None
 
     for t in lowered_texts:
         threats = [kw for kw in threat_keywords if kw in t]
