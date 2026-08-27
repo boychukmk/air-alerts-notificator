@@ -247,7 +247,16 @@ async function copyText(text, btn, restoreLabel){
 }
 
 async function load(){
-  const r = await fetch('/api/state');
+  try {
+    await loadInner();
+  } catch (err) {
+    console.error('load() failed:', err);
+    document.getElementById('regions').innerHTML = '<div class="empty">Помилка завантаження: ' + err.message + '</div>';
+  }
+}
+
+async function loadInner(){
+  const r = await fetch('/api/state', {cache: 'no-store'});
   if (r.status === 401) { window.location = '/login'; return; }
   const s = await r.json();
 
@@ -418,16 +427,19 @@ load();
 """
 
 
+NO_CACHE_HEADERS = {"Cache-Control": "no-store, must-revalidate", "Pragma": "no-cache"}
+
+
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
-    return LOGIN_HTML
+    return HTMLResponse(LOGIN_HTML, headers=NO_CACHE_HEADERS)
 
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
     if not current_phone(request):
         return RedirectResponse("/login")
-    return DASHBOARD_HTML
+    return HTMLResponse(DASHBOARD_HTML, headers=NO_CACHE_HEADERS)
 
 
 @app.post("/api/login")
