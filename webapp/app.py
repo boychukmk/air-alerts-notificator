@@ -247,7 +247,17 @@ function fallbackCopy(text, done){
 }
 
 async function load(){
-  const r = await fetch('/api/state');
+  try {
+    await loadInner();
+  } catch (err) {
+    const msg = (err && err.message) ? err.message : String(err);
+    document.getElementById('regions').innerHTML =
+      '<div class="empty" style="color:#ff4b4b">Помилка: ' + msg + '</div>';
+  }
+}
+
+async function loadInner(){
+  const r = await fetch('/api/state', {cache: 'no-store'});
   if (r.status === 401) { window.location = '/login'; return; }
   const s = await r.json();
 
