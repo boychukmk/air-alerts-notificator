@@ -178,11 +178,6 @@ input:checked + .slider:before{transform:translateX(20px)}
   flex:none; padding:10px 14px; font-size:13px; font-weight:600; color:#fff; border:none;
   border-radius:8px; background:linear-gradient(135deg, var(--accent), var(--accent2));
 }
-.copyall{
-  width:100%; margin-top:10px; padding:12px; font-size:14px; font-weight:600; color:var(--text);
-  background:var(--card); border:1px solid var(--card-border); border-radius:12px;
-}
-.copyall:active{opacity:.7}
 </style></head><body>
 <div class="wrap">
   <div class="topbar">
@@ -199,7 +194,6 @@ input:checked + .slider:before{transform:translateX(20px)}
   <div class="section">
     <div class="section-title">Міста (можна декілька одночасно)</div>
     <div class="card" id="regions"></div>
-    <button class="copyall" id="copyAllTopics" style="display:none">Скопіювати всі топіки</button>
   </div>
 
   <div class="section">
@@ -219,45 +213,8 @@ input:checked + .slider:before{transform:translateX(20px)}
 </div>
 
 <script>
-function copyToClipboard(text, btn){
-  const originalLabel = btn.textContent;
-  function done(ok){
-    btn.textContent = ok ? '✓ Скопійовано' : '✗ Не вдалося скопіювати';
-    setTimeout(function(){ btn.textContent = originalLabel; }, 1500);
-  }
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ fallbackCopy(text, done); });
-  } else {
-    fallbackCopy(text, done);
-  }
-}
-function fallbackCopy(text, done){
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed'; ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.focus(); ta.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(ta);
-    done(ok);
-  } catch (e) {
-    done(false);
-  }
-}
-
 async function load(){
-  try {
-    await loadInner();
-  } catch (err) {
-    const msg = (err && err.message) ? err.message : String(err);
-    document.getElementById('regions').innerHTML =
-      '<div class="empty" style="color:#ff4b4b">Помилка: ' + msg + '</div>';
-  }
-}
-
-async function loadInner(){
-  const r = await fetch('/api/state', {cache: 'no-store'});
+  const r = await fetch('/api/state');
   if (r.status === 401) { window.location = '/login'; return; }
   const s = await r.json();
 
@@ -272,18 +229,6 @@ async function loadInner(){
       row.querySelector('.label').appendChild(sub);
     }
     regionsDiv.appendChild(row);
-  }
-
-  const copyAllBtn = document.getElementById('copyAllTopics');
-  const regionsWithTopics = Object.values(s.regions).filter(function(reg){ return reg.ntfy_topic; });
-  if (regionsWithTopics.length) {
-    copyAllBtn.style.display = 'block';
-    copyAllBtn.onclick = function(){
-      const lines = regionsWithTopics.map(function(reg){ return reg.label + ' — ' + reg.ntfy_topic; });
-      copyToClipboard(lines.join('\n'), copyAllBtn);
-    };
-  } else {
-    copyAllBtn.style.display = 'none';
   }
 
   const threatsDiv = document.getElementById('threats');
@@ -433,19 +378,16 @@ load();
 """
 
 
-NO_CACHE_HEADERS = {"Cache-Control": "no-store, must-revalidate", "Pragma": "no-cache"}
-
-
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
-    return HTMLResponse(LOGIN_HTML, headers=NO_CACHE_HEADERS)
+    return LOGIN_HTML
 
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
     if not current_phone(request):
         return RedirectResponse("/login")
-    return HTMLResponse(DASHBOARD_HTML, headers=NO_CACHE_HEADERS)
+    return DASHBOARD_HTML
 
 
 @app.post("/api/login")
