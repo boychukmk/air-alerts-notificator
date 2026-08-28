@@ -39,6 +39,14 @@ NEGATION_PATTERNS = [
 ]
 
 
+def _strip_footer(text: str) -> str:
+    """Channel signature/cross-promo blocks ("💙 Дніпро Alerts • 💛 Київ Alerts")
+    list unrelated city names joined with a bullet separator. Left in, they make
+    every message from that channel match every region's location keywords
+    regardless of actual content — drop any line containing "•" before matching."""
+    return "\n".join(line for line in text.split("\n") if "•" not in line)
+
+
 def classify_window(texts, location_keywords, threat_keywords, other_region_keywords):
     """texts: recent messages from one channel, oldest first, current message last.
 
@@ -48,6 +56,8 @@ def classify_window(texts, location_keywords, threat_keywords, other_region_keyw
     Priority 2: combine the whole window, but only if no message in it explicitly
     names a different city — avoids stitching together unrelated posts.
     """
+    texts = [_strip_footer(t) for t in texts]
+
     # Drop long/negated messages BEFORE either check — otherwise a message
     # rejected by the single-message loop still slips through via the combined
     # fallback below, since that re-scans the same (unfiltered) text.
