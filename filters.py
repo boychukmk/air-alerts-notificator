@@ -39,12 +39,22 @@ NEGATION_PATTERNS = [
 ]
 
 
+FOOTER_LINE_MARKERS = ["•", "http://", "https://", "t.me/"]
+
+
 def _strip_footer(text: str) -> str:
-    """Channel signature/cross-promo blocks ("💙 Дніпро Alerts • 💛 Київ Alerts")
-    list unrelated city names joined with a bullet separator. Left in, they make
-    every message from that channel match every region's location keywords
-    regardless of actual content — drop any line containing "•" before matching."""
-    return "\n".join(line for line in text.split("\n") if "•" not in line)
+    """Channel signature/cross-promo blocks — bullet-separated links to sister
+    channels ("💙 Дніпро Alerts • 💛 Київ Alerts") or donate/join URLs — can contain
+    city names or other keywords unrelated to the actual alert content. Left in,
+    a single such line can make a message match every region regardless of what
+    the message actually says. Drop any line carrying one of these markers before
+    matching. Best-effort: covers footer styles observed in events.db so far,
+    not a general footer detector — extend the marker list as new channels'
+    signature formats show up as false positives."""
+    return "\n".join(
+        line for line in text.split("\n")
+        if not any(marker in line for marker in FOOTER_LINE_MARKERS)
+    )
 
 
 def classify_window(texts, location_keywords, threat_keywords, other_region_keywords):
