@@ -155,11 +155,6 @@ input:checked + .slider:before{transform:translateX(20px)}
   border-radius:10px; background:linear-gradient(135deg, var(--accent), var(--accent2));
 }
 .hint{font-size:12px; color:var(--muted); margin:8px 4px 0}
-.copyall{
-  width:100%; margin-top:10px; padding:12px; font-size:14px; font-weight:600; color:var(--text);
-  background:var(--card); border:1px solid var(--card-border); border-radius:12px;
-}
-.copyall:active{opacity:.7}
 
 .threat-block{border-bottom:1px solid var(--card-border)}
 .threat-block:last-child{border-bottom:none}
@@ -199,7 +194,6 @@ input:checked + .slider:before{transform:translateX(20px)}
   <div class="section">
     <div class="section-title">Міста (можна декілька одночасно)</div>
     <div class="card" id="regions"></div>
-    <button class="copyall" id="copyAllBtn" onclick="copyAllTopics()">Скопіювати всі топіки</button>
   </div>
 
   <div class="section">
@@ -219,39 +213,6 @@ input:checked + .slider:before{transform:translateX(20px)}
 </div>
 
 <script>
-async function copyAllTopics(){
-  var btn = document.getElementById('copyAllBtn');
-  var originalLabel = btn.textContent;
-  try {
-    var resp = await fetch('/api/state', {cache: 'no-store'});
-    var data = await resp.json();
-    var lines = [];
-    for (var key in data.regions) {
-      var reg = data.regions[key];
-      if (reg.ntfy_topic) lines.push(reg.label + ' — ' + reg.ntfy_topic);
-    }
-    var text = lines.join('\n');
-
-    var copied = false;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      try { await navigator.clipboard.writeText(text); copied = true; } catch (e) { copied = false; }
-    }
-    if (!copied) {
-      var ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed'; ta.style.left = '-9999px';
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      copied = document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-    btn.textContent = copied ? '✓ Скопійовано' : '✗ Не вдалося скопіювати';
-  } catch (e) {
-    btn.textContent = '✗ Помилка: ' + e.message;
-  }
-  setTimeout(function(){ btn.textContent = originalLabel; }, 1500);
-}
-
 async function load(){
   try {
     await loadInner();
