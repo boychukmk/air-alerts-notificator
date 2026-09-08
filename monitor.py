@@ -161,7 +161,7 @@ async def main():
                 task = asyncio.create_task(
                     send_alert_burst(
                         live.ntfy_server, region["ntfy_topic"], live.ntfy_priority,
-                        region["label"], channel_label, text, link=message_link, count=10, interval_seconds=1.0,
+                        region["label"], channel_label, text, link=message_link, count=5, interval_seconds=1.0,
                     )
                 )
                 background_tasks.add(task)
