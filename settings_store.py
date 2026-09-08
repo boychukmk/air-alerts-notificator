@@ -139,7 +139,7 @@ def ensure_region_topic(region_key: str) -> str:
         c.close()
         return row["ntfy_topic"]
 
-    topic = f"alert-{region_key}-{secrets.token_hex(12)}"
+    topic = f"alert-{region_key}-{secrets.token_hex(16)}"
     c.execute("UPDATE regions SET ntfy_topic=? WHERE key=?", (topic, region_key))
     c.commit()
     c.close()
