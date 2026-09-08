@@ -21,6 +21,9 @@ def build_other_region_keywords(config: dict):
     return other
 
 
+import re
+
+
 def _find_matches(text: str, keywords) -> list[str]:
     lowered = text.lower()
     return [kw for kw in keywords if kw in lowered]
@@ -31,13 +34,45 @@ def _find_matches(text: str, keywords) -> list[str]:
 # "stay alert" advisories — genuine keyword hits, zero actionable urgency.
 MAX_ALERT_LENGTH = 200
 
-# Reassurance / all-clear phrasing ("жодна балістика не прямує", "відбій") still
-# contains the threat+location keywords but means the opposite of an alert.
-NEGATION_PATTERNS = [
-    "не прямує", "не летить", "не летять", "не зафіксован", "не підтвердж",
-    "відбій", "немає загроз", "загрози немає", "без загроз", "скасован", "хибн",
-    "наразі чисто", "поки чисто", "вже чисто",
-]
+# Ukrainian verbs inflect by tense/person/gender ("прямує" / "прямують" / "прямувала"),
+# so matching a literal phrase like "не прямує" only ever catches the ONE conjugation
+# already seen in past incidents — the next inflected form is a silent miss, and every
+# fix becomes a one-off patch after the fact. Matching by STEM instead means one entry
+# covers the whole conjugation family, including forms nobody has seen yet.
+#
+# Each group below is a linguistic CATEGORY (what kind of statement this is), not a
+# transcript of a specific past message — new phrasing within a category is caught
+# automatically as long as it shares the stem.
+
+# Category 1: negated motion/confirmation verb ("не прямує/прямують/прямувала",
+# "не зафіксовано", "не підтверджено") — the threat explicitly isn't happening.
+_NEGATED_VERB_STEMS = ["прям", "лет", "рух", "наближ", "заход", "зафіксов", "підтвердж"]
+_NEGATED_VERB_RE = re.compile(r"не\s+\w*(?:" + "|".join(_NEGATED_VERB_STEMS) + r")\w*")
+
+# Category 2: all-clear STATE, independent of which adverb/adjective is chosen
+# ("наразі чисто", "поки спокійно", "вже тихо", "зараз чисто на небі").
+_ALL_CLEAR_RE = re.compile(r"(наразі|поки|вже|зараз)\w*\s+\w*(чист|спокійн|тих)\w*")
+
+# Category 3: explicit statement that no threat exists, any word order
+# ("без загроз", "загрози немає", "немає загроз", "відбій", "скасовано", "хибна тривога").
+_NO_THREAT_RE = re.compile(r"без\s+загроз|загроз\w*\s+нема|нема\w*\s+загроз|скасован|хибн|відбій")
+
+# Category 4: explicit if-then conditional ("якщо ... то ...") — describes a
+# hypothetical scenario, not an in-progress event. Deliberately narrow: weaker
+# words like "можливо"/"ризик" are NOT included here, because they also show up in
+# genuine urgent warnings ("високий ризик балістики зараз, в укриття") — for a
+# life-safety channel, missing a real alert is worse than one extra false one, so
+# only an unambiguous conditional construct is treated as speculative.
+_CONDITIONAL_RE = re.compile(r"\bякщо\b.*\bто\b")
+
+
+def _is_negated(lowered_text: str) -> bool:
+    return bool(
+        _NEGATED_VERB_RE.search(lowered_text)
+        or _ALL_CLEAR_RE.search(lowered_text)
+        or _NO_THREAT_RE.search(lowered_text)
+        or _CONDITIONAL_RE.search(lowered_text)
+    )
 
 
 FOOTER_LINE_MARKERS = ["•", "http://", "https://", "t.me/"]
@@ -74,7 +109,7 @@ def classify_window(texts, location_keywords, threat_keywords, other_region_keyw
     # fallback below, since that re-scans the same (unfiltered) text.
     lowered_texts = [
         t.lower() for t in texts
-        if len(t) <= MAX_ALERT_LENGTH and not any(p in t.lower() for p in NEGATION_PATTERNS)
+        if len(t) <= MAX_ALERT_LENGTH and not _is_negated(t.lower())
     ]
     if not lowered_texts:
         return None
