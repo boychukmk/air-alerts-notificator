@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alert Monitor</title>
+<link rel="stylesheet" href="/static/dashboard.css"></head><body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="badge">🚨</div>
+      <h1>Alert Monitor</h1>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px">
+      <div class="status"><span class="dot"></span>онлайн</div>
+      <a class="logout" href="#" onclick="logout()">вийти</a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Міста (можна декілька одночасно)</div>
+    <div class="card" id="regions"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Типи загроз</div>
+    <div class="card" id="threats"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Джерела (канали)</div>
+    <div class="card" id="channels"></div>
+    <div class="card addbox">
+      <input id="channelInput" placeholder="@канал або t.me/... або t.me/+запрошення">
+      <button id="addBtn" onclick="addChannel()">Додати</button>
+    </div>
+    <p class="hint" id="addHint"></p>
+  </div>
+</div>
+
+<script src="/static/dashboard.js"></script>
+</body></html>

@@ -1,10 +1,10 @@
 import asyncio
-import os
 
 import qrcode
 from telethon.errors import SessionPasswordNeededError
 
-from telegram_client import make_client
+from alertbot.paths import DATA_DIR
+from alertbot.telegram_client import make_client
 
 
 async def main():
@@ -14,7 +14,7 @@ async def main():
     qr = await client.qr_login()
     print(f"QR_URL {qr.url}")
     img = qrcode.make(qr.url, box_size=10, border=2)
-    png_path = os.path.join(os.path.dirname(__file__), "qr.png")
+    png_path = str(DATA_DIR / "qr.png")
     img.save(png_path)
     print(f"QR_PNG {png_path}")
 

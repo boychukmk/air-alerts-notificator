@@ -1,6 +1,6 @@
 import pytest
 
-from filters import classify_window
+from alertbot.filters import classify_window
 
 LOCATION_KEYWORDS = [
     "київ", "києва", "києву", "києвом", "київщин", "столиц",

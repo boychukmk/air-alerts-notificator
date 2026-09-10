@@ -1,7 +1,7 @@
 import json
 import sqlite3
 
-import settings_store as store
+from alertbot import settings_store as store
 
 NEW_REGIONS = {
     "odesa": {

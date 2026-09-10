@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-import settings_store as store
+from alertbot import settings_store as store
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +53,7 @@ def test_add_and_remove_threat_keyword():
 
 
 def test_add_threat_keyword_is_idempotent():
-    store.add_threat_keyword("ballistic", "балістик")  # already present
+    store.add_threat_keyword("ballistic", "балістик")
     keywords = store.get_state()["threat_types"]["ballistic"]["keywords"]
     assert keywords.count("балістик") == 1
 

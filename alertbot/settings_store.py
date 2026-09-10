@@ -1,9 +1,10 @@
 import json
-import os
 import sqlite3
 import time
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "settings.db")
+from alertbot.paths import DATA_DIR
+
+DB_PATH = str(DATA_DIR / "settings.db")
 
 
 def _conn():
@@ -66,7 +67,7 @@ def init_db():
         try:
             c.execute(stmt)
         except sqlite3.OperationalError:
-            pass  # column already exists
+            pass
 
     # migrate legacy single active_region -> that region enabled, with a topic
     legacy = c.execute("SELECT value FROM app_state WHERE key='active_region'").fetchone()

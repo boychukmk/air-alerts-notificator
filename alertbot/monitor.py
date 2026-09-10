@@ -1,20 +1,20 @@
 import asyncio
 import logging
-import os
 
 from telethon import events
 from telethon.errors import UserAlreadyParticipantError
 from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.tl.functions.messages import ImportChatInviteRequest
 
-import settings_store as store
-from channel_input import parse_channel_input
-from dedup import InMemoryDedup
-from filters import classify_window
-from links import build_message_link
-from notifier import send_alert_burst
-from storage import EventLog
-from telegram_client import make_client
+from alertbot import settings_store as store
+from alertbot.channel_input import parse_channel_input
+from alertbot.dedup import InMemoryDedup
+from alertbot.filters import classify_window
+from alertbot.links import build_message_link
+from alertbot.notifier import send_alert_burst
+from alertbot.paths import DATA_DIR
+from alertbot.storage import EventLog
+from alertbot.telegram_client import make_client
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 log = logging.getLogger("monitor")
@@ -32,7 +32,7 @@ class LiveConfig:
         self.state = None
         self.threat_keywords = []
         self.enabled_channel_keys = set()
-        self.enabled_regions = {}  # key -> {label, location_keywords, other_region_keywords, ntfy_topic}
+        self.enabled_regions = {}
         self.ntfy_server = "https://ntfy.sh"
         self.ntfy_priority = "urgent"
         self.refresh()
@@ -112,7 +112,7 @@ async def main():
     log.info("enabled_channels=%s", live.enabled_channel_keys)
 
     dedup = InMemoryDedup(window_seconds=180)
-    event_log = EventLog(os.path.join(os.path.dirname(__file__), "events.db"))
+    event_log = EventLog(str(DATA_DIR / "events.db"))
 
     client = make_client()
     background_tasks = set()

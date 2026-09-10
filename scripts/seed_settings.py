@@ -1,8 +1,8 @@
 import json
 import sqlite3
 
-import settings_store as store
-from auth import hash_password, new_readable_password
+from alertbot import settings_store as store
+from alertbot.auth import hash_password, new_readable_password
 
 ALLOWED_PHONES = ["REDACTED_PHONE", "REDACTED_PHONE"]
 

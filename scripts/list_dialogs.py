@@ -1,6 +1,6 @@
 import asyncio
 
-from telegram_client import make_client
+from alertbot.telegram_client import make_client
 
 
 async def main():

@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from links import build_message_link
+from alertbot.links import build_message_link
 
 
 def test_link_for_public_channel_uses_username():

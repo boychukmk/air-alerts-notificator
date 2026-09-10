@@ -24,7 +24,11 @@
   `/home/deploy/alert-monitor/settings.db` (**не** в git)
 - Telegram-сесія (залогінений акаунт) — `/home/deploy/alert-monitor/session.session`
   (**не** в git — фактично пароль від Telegram-акаунта)
-- Деплой = `scp` зміненого `.py`-файлу на сервер + `sudo systemctl restart <service>`.
+- Деплой = синхронізувати змінені файли на сервер (структура пакета —
+  `alertbot/`, `webapp/`, `scripts/` — тепер багатофайлова, тож при зміні
+  залежностей чи додаванні файлів простіше `scp -r` цілу директорію, ніж
+  по файлу) + `sudo systemctl restart <service>`. Після зміни залежностей —
+  `venv/bin/pip install -r requirements.txt` на сервері.
   Систематичного CI/CD пайплайну нема, деплоїться вручну.
 
 ## Systemd-сервіси (на сервері)

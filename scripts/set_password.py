@@ -1,8 +1,8 @@
 import sqlite3
 import sys
 
-import settings_store as store
-from auth import hash_password
+from alertbot import settings_store as store
+from alertbot.auth import hash_password
 
 
 def main(phone: str, new_password: str):

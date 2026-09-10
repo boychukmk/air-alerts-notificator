@@ -1,6 +1,6 @@
 import pytest
 
-from channel_input import parse_channel_input
+from alertbot.channel_input import parse_channel_input
 
 
 @pytest.mark.parametrize("raw,expected", [

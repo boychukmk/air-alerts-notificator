@@ -3,7 +3,7 @@ import sys
 
 from telethon.tl.functions.auth import ResendCodeRequest
 
-from telegram_client import make_client
+from alertbot.telegram_client import make_client
 
 
 async def resend(phone: str, phone_code_hash: str):

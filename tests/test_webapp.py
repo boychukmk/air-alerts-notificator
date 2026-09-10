@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-import settings_store as store
+from alertbot import settings_store as store
 
 # webapp.app calls store.init_db() at import time using settings_store.DB_PATH,
 # so the path must be redirected to a throwaway file BEFORE that first import —
@@ -12,7 +12,7 @@ store.DB_PATH = os.path.join(tempfile.mkdtemp(), "settings.db")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from auth import hash_password  # noqa: E402
+from alertbot.auth import hash_password  # noqa: E402
 from webapp.app import app  # noqa: E402
 
 PHONE = "380990000000"
@@ -60,7 +60,7 @@ def test_login_wrong_password(client):
 
 
 def test_login_malformed_body_is_422_not_500(client):
-    resp = client.post("/api/login", json={"phone": PHONE})  # missing password
+    resp = client.post("/api/login", json={"phone": PHONE})
     assert resp.status_code == 422
 
 
@@ -76,7 +76,7 @@ def test_login_success_sets_cookie_and_unlocks_state(client):
 
 def test_region_toggle_malformed_body_is_422(client):
     _login(client)
-    resp = client.post("/api/region", json={"region": "kyiv"})  # missing "enabled"
+    resp = client.post("/api/region", json={"region": "kyiv"})
     assert resp.status_code == 422
 
 

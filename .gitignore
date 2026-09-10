@@ -5,6 +5,7 @@ venv/
 .pytest_cache/
 .idea/
 .vscode/
+*.egg-info/
 
 *.session
 *.session-journal

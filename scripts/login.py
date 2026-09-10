@@ -3,7 +3,7 @@ import asyncio
 
 from telethon.errors import SessionPasswordNeededError
 
-from telegram_client import make_client
+from alertbot.telegram_client import make_client
 
 
 async def request_code(phone: str):

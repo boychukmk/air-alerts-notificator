@@ -1,4 +1,4 @@
-from dedup import InMemoryDedup
+from alertbot.dedup import InMemoryDedup
 
 
 def test_first_message_is_not_duplicate():
@@ -32,5 +32,5 @@ def test_evicts_stale_entries(monkeypatch):
     monkeypatch.setattr(time_module, "monotonic", lambda: fake_now[0])
 
     dedup.is_duplicate("Балістика на Київ")
-    fake_now[0] += 20  # past the window
+    fake_now[0] += 20
     assert dedup.is_duplicate("Балістика на Київ") is False

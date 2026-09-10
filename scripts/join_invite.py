@@ -4,7 +4,7 @@ import sys
 from telethon.errors import UserAlreadyParticipantError
 from telethon.tl.functions.messages import ImportChatInviteRequest
 
-from telegram_client import make_client
+from alertbot.telegram_client import make_client
 
 
 async def main(invite_hash: str):
@@ -24,7 +24,6 @@ async def main(invite_hash: str):
 
 
 if __name__ == "__main__":
-    # accepts either the raw hash or the full https://t.me/+HASH link
     arg = sys.argv[1]
     invite_hash = arg.split("+")[-1] if "+" in arg else arg
     asyncio.run(main(invite_hash))
