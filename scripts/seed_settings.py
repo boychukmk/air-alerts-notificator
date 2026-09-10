@@ -1,10 +1,11 @@
 import json
+import secrets
 import sqlite3
 
 from alertbot import settings_store as store
 from alertbot.auth import hash_password, new_readable_password
 
-ALLOWED_PHONES = ["REDACTED_PHONE", "REDACTED_PHONE"]
+ALLOWED_PHONES = ["380000000000", "380000000001"]  # replace with real phone numbers before running
 
 REGIONS = {
     "kyiv": {
@@ -77,7 +78,8 @@ def main():
 
     c.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('active_region', 'kyiv')")
     c.execute(
-        "INSERT OR REPLACE INTO app_state (key, value) VALUES ('ntfy_topic', 'alert-REDACTED_NTFY_HASH')"
+        "INSERT OR REPLACE INTO app_state (key, value) VALUES ('ntfy_topic', ?)",
+        (f"alert-{secrets.token_hex(16)}",),
     )
     c.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('ntfy_server', 'https://ntfy.sh')")
 

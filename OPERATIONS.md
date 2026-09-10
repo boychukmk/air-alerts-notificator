@@ -7,11 +7,11 @@ reference, not a development guide.
 ## Server
 
 - **Provider**: Hetzner Cloud, CPX31 plan (4 vCPU / 8 GB / 80 GB), Ubuntu 24.04, EU region (Falkenstein/Nürnberg)
-- **Public IP**: `SERVER_IP`
+- **Public IP**: `<SERVER_IP>`
 - **Shared** with another project on the same machine — the production backend for **VocaLoft**
   (youtube-audio-studio, `api.vocaloft.com`, Docker Compose + Caddy). This bot
   lives separately, in its own directory, under systemd, with no secrets shared with VocaLoft.
-- **SSH**: `ssh deploy@SERVER_IP` (key-based auth, root/password login disabled,
+- **SSH**: `ssh deploy@<SERVER_IP>` (key-based auth, root/password login disabled,
   ufw: 22/80/443 open to everyone, everything else denied by default)
 
 ## Code and deployment
@@ -46,7 +46,7 @@ Both are `Restart=always`, surviving server reboots and process crashes.
 
 ## Web control panel
 
-- **URL**: http://TAILSCALE_IP:8081 (reachable **only** over Tailscale VPN,
+- **URL**: http://<TAILSCALE_IP>:8081 (reachable **only** over Tailscale VPN,
   not from the open internet — port 8081 is closed in ufw for the public interface)
 - Login is by phone number; exactly 2 users are registered, and no new ones
   can be added through the app (there's no registration feature — only manual
@@ -58,7 +58,7 @@ Both are `Restart=always`, surviving server reboots and process crashes.
 ## VPN (Tailscale)
 
 - Private network, free plan, account tied to the owner's Google login
-- The server has a static tailnet address `TAILSCALE_IP`
+- The server has a static tailnet address `<TAILSCALE_IP>`
 - To get access from a new device — install the Tailscale app
   (App Store / tailscale.com), sign in with the same account
 - Port 8081 in ufw is open exclusively `on tailscale0` — without joining this

@@ -32,7 +32,7 @@ def test_enabling_region_assigns_topic():
     store.set_region_enabled("kyiv", True)
     state = store.get_state()
     assert state["regions"]["kyiv"]["enabled"] is True
-    assert state["regions"]["kyiv"]["ntfy_topic"] == f"alert-kyiv-{store.TOPIC_HASH}"
+    assert state["regions"]["kyiv"]["ntfy_topic"].startswith("alert-kyiv-")
 
 
 def test_topic_is_stable_across_toggles():

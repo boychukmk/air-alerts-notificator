@@ -130,18 +130,21 @@ def set_region_enabled(region_key: str, enabled: bool):
     c.close()
 
 
-TOPIC_HASH = "REDACTED_NTFY_HASH"
-
-
 def ensure_region_topic(region_key: str) -> str:
-    """Every enabled region needs its own ntfy topic. Generate once, keep stable after."""
+    """Every enabled region needs its own ntfy topic. Generate once, keep stable after.
+
+    ntfy.sh is public and unauthenticated — knowing a topic name is enough to publish
+    to it or read it, so this must be an unguessable random value per region, never a
+    hardcoded constant in source control."""
+    import secrets
+
     c = _conn()
     row = c.execute("SELECT ntfy_topic FROM regions WHERE key=?", (region_key,)).fetchone()
     if row and row["ntfy_topic"]:
         c.close()
         return row["ntfy_topic"]
 
-    topic = f"alert-{region_key}-{TOPIC_HASH}"
+    topic = f"alert-{region_key}-{secrets.token_hex(16)}"
     c.execute("UPDATE regions SET ntfy_topic=? WHERE key=?", (topic, region_key))
     c.commit()
     c.close()
