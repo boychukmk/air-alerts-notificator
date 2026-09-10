@@ -1,6 +1,9 @@
 import asyncio
+import logging
+
 import httpx
 
+log = logging.getLogger("notifier")
 _client = httpx.AsyncClient(timeout=5.0)
 
 
@@ -34,7 +37,7 @@ async def send_alert_burst(
     for i in range(1, count + 1):
         try:
             await send_alert(ntfy_server, ntfy_topic, priority, region_label, channel_name, text, link=link, seq=i)
-        except Exception as e:
-            print(f"[notifier] burst send #{i} failed: {e}")
+        except Exception:
+            log.exception("burst send #%d failed", i)
         if i < count:
             await asyncio.sleep(interval_seconds)

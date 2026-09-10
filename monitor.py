@@ -1,7 +1,8 @@
 import asyncio
+import logging
 import os
 
-from telethon import TelegramClient, events
+from telethon import events
 from telethon.tl.functions.messages import ImportChatInviteRequest
 from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.errors import UserAlreadyParticipantError
@@ -13,10 +14,10 @@ from filters import classify_window
 from dedup import InMemoryDedup
 from notifier import send_alert_burst
 from storage import EventLog
+from telegram_client import make_client
 
-API_ID = int(os.environ["TG_API_ID"])
-API_HASH = os.environ["TG_API_HASH"]
-SESSION_PATH = os.path.join(os.path.dirname(__file__), "session")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+log = logging.getLogger("monitor")
 
 REFRESH_SECONDS = 5
 GLOBAL_ALERT_COOLDOWN_SECONDS = 120
@@ -70,8 +71,8 @@ class LiveConfig:
             await asyncio.sleep(REFRESH_SECONDS)
             try:
                 self.refresh()
-            except Exception as e:
-                print(f"[monitor] config refresh failed: {e}")
+            except Exception:
+                log.exception("config refresh failed")
 
 
 async def process_join_requests(client):
@@ -92,28 +93,28 @@ async def process_join_requests(client):
                     label = getattr(chat, "title", None) or key
                     store.add_channel(key, label, enabled=True)
                     store.set_join_request_result(req["id"], "done", f"joined: {label}")
-                    print(f"[join] added channel {label} ({key})")
+                    log.info("added channel %s (%s)", label, key)
                 except UserAlreadyParticipantError:
                     store.set_join_request_result(req["id"], "done", "already a member")
                 except Exception as e:
                     store.set_join_request_result(req["id"], "failed", str(e))
-                    print(f"[join] failed for '{req['raw_input']}': {e}")
-        except Exception as e:
-            print(f"[join] loop error: {e}")
+                    log.warning("join failed for %r: %s", req["raw_input"], e)
+        except Exception:
+            log.exception("join request loop error")
 
 
 async def main():
     store.init_db()
     live = LiveConfig()
 
-    print(f"[monitor] enabled_regions={list(live.enabled_regions.keys())}")
-    print(f"[monitor] threat_keywords={live.threat_keywords}")
-    print(f"[monitor] enabled_channels={live.enabled_channel_keys}")
+    log.info("enabled_regions=%s", list(live.enabled_regions.keys()))
+    log.info("threat_keywords=%s", live.threat_keywords)
+    log.info("enabled_channels=%s", live.enabled_channel_keys)
 
     dedup = InMemoryDedup(window_seconds=180)
-    log = EventLog(os.path.join(os.path.dirname(__file__), "events.db"))
+    event_log = EventLog(os.path.join(os.path.dirname(__file__), "events.db"))
 
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
+    client = make_client()
     background_tasks = set()
 
     # Per-region cooldown: if 6 channels all confirm the same launch toward the SAME
@@ -166,11 +167,11 @@ async def main():
                 )
                 background_tasks.add(task)
                 task.add_done_callback(background_tasks.discard)
-                print(f"[ALERT:{region_key}] {channel_label}: {text[:120]}")
+                log.info("ALERT:%s %s: %s", region_key, channel_label, text[:120])
             else:
-                print(f"[CONFIRM:{region_key}] {channel_label} (кулдаун, без нового burst): {text[:120]}")
+                log.info("CONFIRM:%s %s (кулдаун, без нового burst): %s", region_key, channel_label, text[:120])
 
-            log.log(
+            event_log.log(
                 f"{region_key}/{channel_label}", text, match["matched_threats"], match["matched_location"],
                 alerted=is_new_event,
             )
@@ -179,7 +180,7 @@ async def main():
     asyncio.create_task(process_join_requests(client))
 
     await client.start()
-    print("[monitor] listening...")
+    log.info("listening...")
     await client.run_until_disconnected()
 
 
