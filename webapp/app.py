@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 import settings_store as store
-from auth import verify_password, new_session_token  # noqa: F401 (new_readable_password used by seed/reset scripts)
+from auth import new_session_token, verify_password  # noqa: F401 (new_readable_password used by seed/reset scripts)
 
 store.init_db()
 

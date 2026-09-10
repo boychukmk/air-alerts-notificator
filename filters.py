@@ -1,3 +1,6 @@
+import re
+
+
 def build_active_keywords(config: dict):
     region = config["regions"][config["active_region"]]
     location_keywords = region["target_keywords"] + region["transit_keywords"]
@@ -19,9 +22,6 @@ def build_other_region_keywords(config: dict):
             continue
         other.extend(region["target_keywords"])
     return other
-
-
-import re
 
 
 def _find_matches(text: str, keywords) -> list[str]:

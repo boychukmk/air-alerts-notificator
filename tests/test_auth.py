@@ -1,4 +1,4 @@
-from auth import hash_password, verify_password, new_session_token, new_readable_password
+from auth import hash_password, new_readable_password, new_session_token, verify_password
 
 
 def test_verify_password_correct():

@@ -3,15 +3,15 @@ import logging
 import os
 
 from telethon import events
-from telethon.tl.functions.messages import ImportChatInviteRequest
-from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.errors import UserAlreadyParticipantError
+from telethon.tl.functions.channels import JoinChannelRequest
+from telethon.tl.functions.messages import ImportChatInviteRequest
 
 import settings_store as store
 from channel_input import parse_channel_input
-from links import build_message_link
-from filters import classify_window
 from dedup import InMemoryDedup
+from filters import classify_window
+from links import build_message_link
 from notifier import send_alert_burst
 from storage import EventLog
 from telegram_client import make_client

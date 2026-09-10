@@ -1,8 +1,8 @@
 import asyncio
 import sys
 
-from telethon.tl.functions.messages import ImportChatInviteRequest
 from telethon.errors import UserAlreadyParticipantError
+from telethon.tl.functions.messages import ImportChatInviteRequest
 
 from telegram_client import make_client
 
