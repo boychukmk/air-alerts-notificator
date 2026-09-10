@@ -1,18 +1,14 @@
 import asyncio
-import io
 import os
 
 import qrcode
-from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 
-API_ID = int(os.environ["TG_API_ID"])
-API_HASH = os.environ["TG_API_HASH"]
-SESSION_PATH = os.path.join(os.path.dirname(__file__), "kyiv_bot_session")
+from telegram_client import make_client
 
 
 async def main():
-    client = TelegramClient(SESSION_PATH, API_ID, API_HASH)
+    client = make_client()
     await client.connect()
 
     qr = await client.qr_login()
