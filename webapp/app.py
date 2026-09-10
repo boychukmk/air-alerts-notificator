@@ -3,17 +3,47 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from pydantic import BaseModel
 
 import settings_store as store
-from auth import verify_password, new_session_token, new_readable_password  # noqa: F401
+from auth import verify_password, new_session_token  # noqa: F401 (new_readable_password used by seed/reset scripts)
 
 store.init_db()
 
 app = FastAPI()
 
 COOKIE_NAME = "session"
+
+
+class LoginBody(BaseModel):
+    phone: str
+    password: str
+
+
+class RegionBody(BaseModel):
+    region: str
+    enabled: bool
+
+
+class ThreatBody(BaseModel):
+    key: str
+    enabled: bool
+
+
+class ThreatKeywordBody(BaseModel):
+    key: str
+    keyword: str
+
+
+class ChannelBody(BaseModel):
+    key: str
+    enabled: bool
+
+
+class ChannelAddBody(BaseModel):
+    input: str
 
 
 def current_phone(request: Request):
@@ -24,6 +54,13 @@ def current_phone(request: Request):
     if not session:
         return None
     return session["phone"]
+
+
+def require_phone(request: Request) -> str:
+    phone = current_phone(request)
+    if not phone:
+        raise HTTPException(status_code=401, detail="unauthorized")
+    return phone
 
 
 LOGIN_HTML = """
@@ -403,13 +440,11 @@ def dashboard(request: Request):
 
 
 @app.post("/api/login")
-async def api_login(request: Request, response: Response):
-    body = await request.json()
-    phone = "".join(ch for ch in body.get("phone", "") if ch.isdigit())
-    password = body.get("password", "")
+async def api_login(body: LoginBody):
+    phone = "".join(ch for ch in body.phone if ch.isdigit())
 
     user = store.get_user(phone)
-    if not user or not verify_password(password, user["salt"], user["password_hash"]):
+    if not user or not verify_password(body.password, user["salt"], user["password_hash"]):
         return JSONResponse({"error": "invalid"}, status_code=401)
 
     token = new_session_token()
@@ -429,71 +464,44 @@ async def api_logout(request: Request):
     return resp
 
 
-def _require_auth(request: Request):
-    phone = current_phone(request)
-    if not phone:
-        return None
-    return phone
-
-
 @app.get("/api/state")
-async def api_state(request: Request):
-    if not _require_auth(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
+async def api_state(phone: str = Depends(require_phone)):
     return store.get_state()
 
 
 @app.post("/api/region")
-async def api_region(request: Request):
-    if not _require_auth(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
-    body = await request.json()
-    store.set_region_enabled(body["region"], body["enabled"])
+async def api_region(body: RegionBody, phone: str = Depends(require_phone)):
+    store.set_region_enabled(body.region, body.enabled)
     return {"ok": True}
 
 
 @app.post("/api/threat")
-async def api_threat(request: Request):
-    if not _require_auth(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
-    body = await request.json()
-    store.set_threat_type_enabled(body["key"], body["enabled"])
+async def api_threat(body: ThreatBody, phone: str = Depends(require_phone)):
+    store.set_threat_type_enabled(body.key, body.enabled)
     return {"ok": True}
 
 
 @app.post("/api/threat/keyword/add")
-async def api_threat_keyword_add(request: Request):
-    if not _require_auth(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
-    body = await request.json()
-    store.add_threat_keyword(body["key"], body["keyword"])
+async def api_threat_keyword_add(body: ThreatKeywordBody, phone: str = Depends(require_phone)):
+    store.add_threat_keyword(body.key, body.keyword)
     return {"ok": True}
 
 
 @app.post("/api/threat/keyword/remove")
-async def api_threat_keyword_remove(request: Request):
-    if not _require_auth(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
-    body = await request.json()
-    store.remove_threat_keyword(body["key"], body["keyword"])
+async def api_threat_keyword_remove(body: ThreatKeywordBody, phone: str = Depends(require_phone)):
+    store.remove_threat_keyword(body.key, body.keyword)
     return {"ok": True}
 
 
 @app.post("/api/channel")
-async def api_channel(request: Request):
-    if not _require_auth(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
-    body = await request.json()
-    store.set_channel_enabled(body["key"], body["enabled"])
+async def api_channel(body: ChannelBody, phone: str = Depends(require_phone)):
+    store.set_channel_enabled(body.key, body.enabled)
     return {"ok": True}
 
 
 @app.post("/api/channels/add")
-async def api_channels_add(request: Request):
-    if not _require_auth(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
-    body = await request.json()
-    raw = (body.get("input") or "").strip()
+async def api_channels_add(body: ChannelAddBody, phone: str = Depends(require_phone)):
+    raw = body.input.strip()
     if not raw:
         return JSONResponse({"error": "empty"}, status_code=400)
     request_id = store.add_join_request(raw)
@@ -501,7 +509,5 @@ async def api_channels_add(request: Request):
 
 
 @app.get("/api/channels/requests")
-async def api_channels_requests(request: Request):
-    if not _require_auth(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
+async def api_channels_requests(phone: str = Depends(require_phone)):
     return store.get_join_requests_recent(10)

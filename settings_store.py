@@ -243,6 +243,11 @@ def get_user(phone: str):
     return dict(row) if row else None
 
 
+# Matches the browser cookie's max_age — a session token found past this age is
+# treated as expired even though nothing ever deletes it proactively.
+SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+
+
 def create_session(token: str, phone: str):
     c = _conn()
     c.execute("INSERT INTO sessions (token, phone, created_ts) VALUES (?, ?, ?)", (token, phone, time.time()))
@@ -254,7 +259,12 @@ def get_session(token: str):
     c = _conn()
     row = c.execute("SELECT * FROM sessions WHERE token=?", (token,)).fetchone()
     c.close()
-    return dict(row) if row else None
+    if not row:
+        return None
+    if time.time() - row["created_ts"] > SESSION_MAX_AGE_SECONDS:
+        delete_session(token)
+        return None
+    return dict(row)
 
 
 def delete_session(token: str):
