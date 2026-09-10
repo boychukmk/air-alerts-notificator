@@ -102,8 +102,7 @@ scripts/             # one-off admin scripts (not run as services)
 
 tests/               # pytest suite
 deploy/              # systemd unit files
-OPERATIONS.md        # deploy/infra reference (server, systemd, VPN) — in Ukrainian,
-                      # written for the author's own ops use, not a dev-facing doc
+OPERATIONS.md        # deploy/infra reference (server, systemd, VPN)
 ```
 
 ## Production

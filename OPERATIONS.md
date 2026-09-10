@@ -1,90 +1,87 @@
-# Air Alerts Notificator — операційна довідка
+# Air Alerts Notificator — Operations Reference
 
-Особистий бот моніторингу Telegram-каналів на предмет ракетних/дронових загроз
-з push-алертами на iPhone. Ця сторінка — довідка "що де лежить і як зайти",
-не інструкція з розробки.
+A personal bot monitoring Telegram channels for missile/drone threats, with
+push alerts to iPhone. This page is a "what lives where and how to get in"
+reference, not a development guide.
 
-## Сервер
+## Server
 
-- **Провайдер**: Hetzner Cloud, тариф CPX31 (4 vCPU / 8 GB / 80 GB), Ubuntu 24.04, регіон EU (Falkenstein/Nürnberg)
-- **Публічний IP**: `SERVER_IP`
-- **Спільно** з іншим проєктом на цій же машині — production-бекенд **VocaLoft**
-  (youtube-audio-studio, `api.vocaloft.com`, Docker Compose + Caddy). Наш бот
-  живе окремо, у власній директорії, під systemd, без спільних секретів з VocaLoft.
-- **SSH**: `ssh deploy@SERVER_IP` (доступ по ключу, root/пароль-логін вимкнені,
-  ufw: 22/80/443 відкриті всім, решта — deny за замовчуванням)
+- **Provider**: Hetzner Cloud, CPX31 plan (4 vCPU / 8 GB / 80 GB), Ubuntu 24.04, EU region (Falkenstein/Nürnberg)
+- **Public IP**: `SERVER_IP`
+- **Shared** with another project on the same machine — the production backend for **VocaLoft**
+  (youtube-audio-studio, `api.vocaloft.com`, Docker Compose + Caddy). This bot
+  lives separately, in its own directory, under systemd, with no secrets shared with VocaLoft.
+- **SSH**: `ssh deploy@SERVER_IP` (key-based auth, root/password login disabled,
+  ufw: 22/80/443 open to everyone, everything else denied by default)
 
-## Код і деплой
+## Code and deployment
 
-- **Git-репозиторій**: https://github.com/boychukmk/air-alerts-notificator (приватний)
-- **Директорія на сервері**: `/home/deploy/alert-monitor/`
-- Секрети (`TG_API_ID`, `TG_API_HASH`) — у `/home/deploy/alert-monitor/.env`
-  (chmod 600, **не** в git, не в systemd unit-файлах)
-- Стан застосунку (регіони, канали, типи загроз, юзери, ntfy-топіки) — у SQLite
-  `/home/deploy/alert-monitor/settings.db` (**не** в git)
-- Telegram-сесія (залогінений акаунт) — `/home/deploy/alert-monitor/session.session`
-  (**не** в git — фактично пароль від Telegram-акаунта)
-- Деплой = синхронізувати змінені файли на сервер (структура пакета —
-  `alertbot/`, `webapp/`, `scripts/` — тепер багатофайлова, тож при зміні
-  залежностей чи додаванні файлів простіше `scp -r` цілу директорію, ніж
-  по файлу) + `sudo systemctl restart <service>`. Після зміни залежностей —
-  `venv/bin/pip install -r requirements.txt` на сервері.
-  Систематичного CI/CD пайплайну нема, деплоїться вручну.
+- **Git repository**: https://github.com/boychukmk/air-alerts-notificator (private)
+- **Server directory**: `/home/deploy/alert-monitor/`
+- Secrets (`TG_API_ID`, `TG_API_HASH`) — in `/home/deploy/alert-monitor/.env`
+  (chmod 600, **not** in git, not in systemd unit files)
+- App state (regions, channels, threat types, users, ntfy topics) — in SQLite
+  at `/home/deploy/alert-monitor/settings.db` (**not** in git)
+- Telegram session (the logged-in account) — `/home/deploy/alert-monitor/session.session`
+  (**not** in git — effectively a password to the Telegram account)
+- Deploy = `git pull` on the server + `sudo systemctl restart <service>`.
+  After a dependency change, also run `venv/bin/pip install -r requirements.txt`
+  on the server. No CI/CD pipeline deploys automatically — it's a manual step.
 
-## Systemd-сервіси (на сервері)
+## Systemd services (on the server)
 
-| Сервіс | Що робить | Команди |
+| Service | What it does | Commands |
 |---|---|---|
-| `alert-monitor.service` | Telethon-юзербот: слухає канали, фільтрує, шле алерти в ntfy | `sudo systemctl status/restart alert-monitor.service`, логи: `sudo journalctl -u alert-monitor.service -f` |
-| `alert-monitor-web.service` | FastAPI веб-панель керування (uvicorn, порт 8081) | `sudo systemctl status/restart alert-monitor-web.service` |
+| `alert-monitor.service` | Telethon userbot: listens to channels, filters, sends alerts to ntfy | `sudo systemctl status/restart alert-monitor.service`, logs: `sudo journalctl -u alert-monitor.service -f` |
+| `alert-monitor-web.service` | FastAPI control panel (uvicorn, port 8081) | `sudo systemctl status/restart alert-monitor-web.service` |
 
-Обидва — `Restart=always`, переживають перезавантаження сервера й падіння процесу.
+Both are `Restart=always`, surviving server reboots and process crashes.
 
-## Telegram-акаунт (моніторинговий юзербот)
+## Telegram account (the monitoring userbot)
 
-- Окремий Telegram-акаунт, **не основний особистий**, номер `+REDACTED_PHONE`
-- api_id/api_hash отримані на my.telegram.org під цим номером
-- Приєднаний (як звичайний учасник) до каналів-джерел — керується через веб-панель
-  або напряму через `join_invite.py`
+- A separate Telegram account, **not the author's main personal one**
+- api_id/api_hash obtained at my.telegram.org under that account
+- Joined (as a regular member) to source channels — managed via the web panel
+  or directly through `scripts/join_invite.py`
 
-## Веб-панель керування
+## Web control panel
 
-- **URL**: http://TAILSCALE_IP:8081 (доступний **лише** через Tailscale VPN,
-  не з відкритого інтернету — порт 8081 закритий у ufw для публічного інтерфейсу)
-- Логін — за номером телефону, зареєстровано рівно 2 користувачі, нових не додає
-  (реєстрації як функції не існує в коді, тільки ручне додавання через
-  `seed_settings.py` на сервері)
-- Функції: увімкнути/вимкнути місто (можна декілька одночасно, кожне зі своїм
-  ntfy-топіком), увімкнути/вимкнути тип загрози, переглянути й дописати
-  тригер-слова, додати новий канал-джерело за посиланням/тегом
+- **URL**: http://TAILSCALE_IP:8081 (reachable **only** over Tailscale VPN,
+  not from the open internet — port 8081 is closed in ufw for the public interface)
+- Login is by phone number; exactly 2 users are registered, and no new ones
+  can be added through the app (there's no registration feature — only manual
+  insertion via `scripts/seed_settings.py` on the server)
+- Features: enable/disable a city (several can be active at once, each with
+  its own ntfy topic), enable/disable a threat type, view and add trigger
+  keywords, add a new source channel by link or handle
 
 ## VPN (Tailscale)
 
-- Приватна мережа, безкоштовний план, акаунт прив'язаний до Google-логіну
-  власника (boychuk.mk@)
-- Сервер має статичну tailnet-адресу `TAILSCALE_IP`
-- Щоб отримати доступ з нового пристрою — встановити застосунок Tailscale
-  (App Store / tailscale.com), залогінитись тим самим акаунтом
-- Порт 8081 у ufw відкритий виключно `on tailscale0` — без підключення до цієї
-  мережі веб-панель фізично недосяжна ззовні
+- Private network, free plan, account tied to the owner's Google login
+- The server has a static tailnet address `TAILSCALE_IP`
+- To get access from a new device — install the Tailscale app
+  (App Store / tailscale.com), sign in with the same account
+- Port 8081 in ufw is open exclusively `on tailscale0` — without joining this
+  network the panel is physically unreachable from outside
 
-## Доставка алертів (ntfy)
+## Alert delivery (ntfy)
 
-- Сервіс: https://ntfy.sh (публічний, безкоштовний, без реєстрації)
-- **Кожне місто має власний топік** (генерується автоматично при увімкненні
-  регіону в панелі, видно в самій панелі поруч з тумблером)
-- На iPhone: застосунок **ntfy** з App Store, підписка на конкретний топік свого міста
-- Обов'язкове одноразове налаштування iPhone: **Налаштування → Фокус → [режим] →
-  Дозволені сповіщення → ntfy → Time Sensitive Notifications** — без цього
-  сповіщення можуть глушитись у режимі "не турбувати"/нічний Фокус
-- При спрацюванні тригера — серія з 5 сповіщень з інтервалом ~1 сек (не одне),
-  щоб гарантовано привернути увагу; глобальний кулдаун 2 хв **на місто** —
-  кілька каналів, що підтверджують ту саму подію, не спамлять окремими сплесками
+- Service: https://ntfy.sh (public, free, no registration required)
+- **Each city has its own topic** (generated automatically when a region is
+  enabled in the panel, shown right next to its toggle)
+- On iPhone: the **ntfy** app from the App Store, subscribed to the specific
+  topic for one's city
+- Required one-time iPhone setup: **Settings → Focus → [mode] →
+  Allowed Notifications → ntfy → Time Sensitive Notifications** — without this,
+  notifications can get muted under Do Not Disturb / a nighttime Focus mode
+- On trigger — a burst of 5 notifications spaced ~1s apart (not just one),
+  to reliably grab attention; a global 2-minute cooldown **per city** —
+  several channels confirming the same event don't spam separate bursts
 
-## Відомі обмеження
+## Known limitations
 
-- Без Apple Developer акаунта немає власного звуку сповіщення — лише вбудовані
-  тони ntfy; повноцінний Notification Service Extension (кастомний звук,
-  критичні сповіщення) вимагає платного акаунта Apple ($99/рік)
-- Веб-панель — plain HTTP (без TLS), безпека тримається на замкненості в
-  Tailscale-мережі, а не на шифруванні трафіку
+- Without an Apple Developer account there's no custom notification sound —
+  only ntfy's built-in tones; a full Notification Service Extension (custom
+  sound, critical alerts) requires a paid Apple account ($99/year)
+- The web panel is plain HTTP (no TLS) — security relies on being closed
+  inside the Tailscale network, not on traffic encryption
