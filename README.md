@@ -43,16 +43,19 @@ python monitor.py                     # моніторинг + алерти
 uvicorn webapp.app:app --reload --port 8081   # веб-панель, окремий термінал
 ```
 
-## Тести
+## Тести й лінтер
 
 ```bash
-pytest
+pytest        # 68 тестів: filters/dedup/auth/channel_input/links/settings_store/webapp
+ruff check .  # лінтер, конфіг у pyproject.toml
 ```
 
 Найважливіше покриття — `tests/test_filters.py`: регресійні кейси на реальних
 повідомленнях з `events.db` (і на справжніх алертах, і на хибних спрацюваннях,
 які траплялись у продакшні). Будь-яка зміна в `filters.py` має проганятись
 через цей набір перед деплоєм.
+
+CI (`.github/workflows/tests.yml`) ганяє `ruff` + `pytest` на кожен push/PR.
 
 ## Структура репозиторію
 
@@ -71,6 +74,8 @@ pytest
 | `login.py`, `qrlogin.py`, `resend.py`, `join_invite.py`, `list_dialogs.py` | Разові адмін-скрипти для авторизації Telegram-акаунта й ручного приєднання до каналів |
 | `seed_settings.py`, `add_regions.py`, `set_password.py` | Разові скрипти адміністрування `settings.db` |
 | `tests/` | pytest-набір |
+| `pyproject.toml` | Конфіг `ruff` (лінтер) |
+| `.github/workflows/tests.yml` | CI: лінтер + тести на кожен push/PR |
 | `OPERATIONS.md` | Довідка з деплою/інфраструктури (сервер, systemd, VPN) |
 
 ## Продакшн
