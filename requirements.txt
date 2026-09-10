@@ -1,3 +1,5 @@
 telethon
 httpx
-pyyaml
+qrcode
+fastapi
+uvicorn[standard]
