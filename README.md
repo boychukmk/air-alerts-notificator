@@ -18,6 +18,18 @@ notification via [ntfy](https://ntfy.sh), loud enough to wake me up. The
 result: normal sleep on quiet nights, and enough warning to get to a safer
 spot on the nights that matter.
 
+## Control panel
+
+<p>
+  <img src="docs/screenshots/login.png" width="260" alt="Login screen">
+  <img src="docs/screenshots/dashboard.png" width="260" alt="Dashboard: cities, threat types, source channels">
+</p>
+
+Toggle cities on/off (each gets its own ntfy topic), enable/disable threat
+types and edit their trigger keywords, and add source channels — all from a
+phone-sized panel reachable only over a private VPN. Screenshots are from a
+local instance with demo data, not the real production panel.
+
 ## How it works
 
 ```
