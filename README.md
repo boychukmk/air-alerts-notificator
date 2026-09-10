@@ -1,14 +1,22 @@
 # Air Alerts Notificator
 
-A personal notification bot for Ukraine. Since Russia's full-scale invasion,
-Ukrainian cities face regular missile and drone strikes, and dozens of
-Telegram channels report real-time sightings of launches, headings and
-targets faster than official air-raid sirens. This bot listens to a curated
-set of those channels, decides whether a message describes an actual,
-in-progress threat to a specific city (as opposed to an all-clear, a forecast,
-or unrelated chatter), and pushes an iPhone notification via
-[ntfy](https://ntfy.sh) — loud enough to wake someone up, but only when it's
-real.
+A personal notification bot, built out of necessity rather than as an
+exercise. My city gets hit by ballistic missiles at night on a near-daily
+basis, and air-raid alerts are a nightly occurrence. When ballistics are
+inbound, there's a 30-60 second window to get away from windows and behind
+interior walls — but sleeping through the night while manually tracking
+Telegram channels for the actual threat level isn't something a person can
+do. Ukraine's official air-raid siren covers entire oblasts and fires early
+and often; dozens of independent Telegram channels report real-time
+launches, headings and targets faster and with more precision, but reading
+them yourself at 3 AM defeats the point of sleeping.
+
+This bot reads those channels for me. It decides whether a message describes
+an actual, in-progress threat to my specific city — as opposed to an
+all-clear, a forecast, or unrelated chatter — and only then pushes an iPhone
+notification via [ntfy](https://ntfy.sh), loud enough to wake me up. The
+result: normal sleep on quiet nights, and enough warning to get to a safer
+spot on the nights that matter.
 
 ## How it works
 
