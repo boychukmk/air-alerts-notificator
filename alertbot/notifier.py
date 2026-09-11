@@ -6,6 +6,9 @@ import httpx
 log = logging.getLogger("notifier")
 _client = httpx.AsyncClient(timeout=5.0)
 
+SEND_RETRIES = 3
+SEND_RETRY_BACKOFF_SECONDS = 1.0
+
 
 async def send_alert(
     ntfy_server: str, ntfy_topic: str, priority: str, region_label: str, channel_name: str, text: str,
@@ -17,15 +20,24 @@ async def send_alert(
     body = f"[{channel_name}] {text[:400]}"
 
     headers = {
-        "Title": title.encode("utf-8"),
-        "Priority": priority,
-        "Tags": "rotating_light",
+        b"Title": title.encode("utf-8"),
+        b"Priority": priority.encode("utf-8"),
+        b"Tags": b"rotating_light",
     }
     if link:
-        headers["Click"] = link.encode("utf-8")
+        headers[b"Click"] = link.encode("utf-8")
         body += f"\n\n{link}"
 
-    await _client.post(url, content=body.encode("utf-8"), headers=headers)
+    for attempt in range(1, SEND_RETRIES + 1):
+        try:
+            resp = await _client.post(url, content=body.encode("utf-8"), headers=headers)
+            resp.raise_for_status()
+            return
+        except httpx.HTTPError:
+            if attempt == SEND_RETRIES:
+                raise
+            log.warning("ntfy send attempt %d/%d failed, retrying", attempt, SEND_RETRIES)
+            await asyncio.sleep(SEND_RETRY_BACKOFF_SECONDS * attempt)
 
 
 async def send_alert_burst(

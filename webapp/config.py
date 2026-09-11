@@ -10,3 +10,4 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 COOKIE_NAME = "session"
 NO_CACHE_HEADERS = {"Cache-Control": "no-store, must-revalidate", "Pragma": "no-cache"}
+HEALTHZ_STALE_AFTER_SECONDS = 900

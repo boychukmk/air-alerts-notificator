@@ -11,8 +11,10 @@ DB_PATH = str(DATA_DIR / "settings.db")
 
 
 def _conn() -> sqlite3.Connection:
-    c = sqlite3.connect(DB_PATH)
+    c = sqlite3.connect(DB_PATH, timeout=5.0)
     c.row_factory = sqlite3.Row
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("PRAGMA busy_timeout=5000")
     return c
 
 
@@ -195,6 +197,7 @@ def add_join_request(raw_input: str) -> int:
             (raw_input, time.time()),
         )
         c.commit()
+        assert cur.lastrowid is not None
         return cur.lastrowid
 
 
@@ -249,3 +252,18 @@ def delete_session(token: str) -> None:
     with closing(_conn()) as c:
         c.execute("DELETE FROM sessions WHERE token=?", (token,))
         c.commit()
+
+
+def set_heartbeat() -> None:
+    with closing(_conn()) as c:
+        c.execute(
+            "INSERT OR REPLACE INTO app_state (key, value) VALUES ('monitor_heartbeat_ts', ?)",
+            (str(time.time()),),
+        )
+        c.commit()
+
+
+def get_heartbeat() -> float | None:
+    with closing(_conn()) as c:
+        row = c.execute("SELECT value FROM app_state WHERE key='monitor_heartbeat_ts'").fetchone()
+    return float(row["value"]) if row else None

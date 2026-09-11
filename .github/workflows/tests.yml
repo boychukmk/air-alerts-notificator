@@ -21,5 +21,8 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      - name: Type check
+        run: mypy alertbot webapp
+
       - name: Test
         run: pytest -q

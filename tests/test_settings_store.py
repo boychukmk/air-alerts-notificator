@@ -110,3 +110,13 @@ def test_session_deleted_on_logout():
 
 def test_get_user_missing_returns_none():
     assert store.get_user("0000000000") is None
+
+
+def test_heartbeat_starts_unset():
+    assert store.get_heartbeat() is None
+
+
+def test_heartbeat_records_current_time(monkeypatch):
+    monkeypatch.setattr(time, "time", lambda: 12345.0)
+    store.set_heartbeat()
+    assert store.get_heartbeat() == 12345.0

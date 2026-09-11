@@ -22,6 +22,16 @@ log = logging.getLogger("monitor")
 
 REFRESH_SECONDS = 5
 GLOBAL_ALERT_COOLDOWN_SECONDS = 120
+HEARTBEAT_INTERVAL_SECONDS = 300
+
+
+async def heartbeat_loop() -> None:
+    while True:
+        try:
+            store.set_heartbeat()
+        except Exception:
+            log.exception("heartbeat write failed")
+        await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
 
 
 class RegionConfig(TypedDict):
@@ -205,6 +215,7 @@ async def main() -> None:
 
     asyncio.create_task(live.refresh_loop())
     asyncio.create_task(process_join_requests(client))
+    asyncio.create_task(heartbeat_loop())
 
     await client.start()
     log.info("listening...")

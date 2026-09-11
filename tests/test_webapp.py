@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 
 import pytest
 
@@ -38,8 +39,11 @@ def _seed_user():
 
 @pytest.fixture
 def client():
+    from webapp import routes
+
     store.init_db()
     _seed_user()
+    routes.login_rate_limiter = routes.LoginRateLimiter()
     return TestClient(app)
 
 
@@ -55,6 +59,16 @@ def test_state_requires_auth(client):
 def test_login_wrong_password(client):
     resp = client.post("/api/login", json={"phone": PHONE, "password": "wrong"})
     assert resp.status_code == 401
+
+
+def test_login_blocked_after_repeated_failures(client):
+    from webapp import routes
+
+    for _ in range(routes.login_rate_limiter.max_failures):
+        client.post("/api/login", json={"phone": PHONE, "password": "wrong"})
+
+    resp = client.post("/api/login", json={"phone": PHONE, "password": PASSWORD})
+    assert resp.status_code == 429
 
 
 def test_login_malformed_body_is_422_not_500(client):
@@ -111,3 +125,26 @@ def test_channels_add_empty_input_is_rejected(client):
     _login(client)
     resp = client.post("/api/channels/add", json={"input": "  "})
     assert resp.status_code == 400
+
+
+def test_healthz_no_heartbeat_yet(client):
+    resp = client.get("/healthz")
+    assert resp.status_code == 503
+
+
+def test_healthz_recent_heartbeat_is_ok(client):
+    store.set_heartbeat()
+    resp = client.get("/healthz")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+
+
+def test_healthz_stale_heartbeat_is_503(client, monkeypatch):
+    from webapp import routes
+
+    store.set_heartbeat()
+    future = time.time() + 10_000
+    monkeypatch.setattr(routes.time, "time", lambda: future)
+    resp = client.get("/healthz")
+    assert resp.status_code == 503
+    assert resp.json()["status"] == "stale"

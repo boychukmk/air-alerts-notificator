@@ -17,3 +17,11 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = "telethon.*"
+ignore_missing_imports = true
