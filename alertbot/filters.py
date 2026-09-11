@@ -36,11 +36,15 @@ def _find_matches(text: str, keywords) -> list[str]:
 
 MAX_ALERT_LENGTH = 200
 
+# Matched by STEM, not exact phrase — one entry covers every tense/person conjugation.
+# Category 1: negated motion/confirmation ("не прямує/прямують", "не зафіксовано").
 _NEGATED_VERB_STEMS = ["прям", "лет", "рух", "наближ", "заход", "зафіксов", "підтвердж"]
 _NEGATED_VERB_RE = re.compile(r"не\s+\w*(?:" + "|".join(_NEGATED_VERB_STEMS) + r")\w*")
+# Category 2: all-clear state ("наразі чисто", "поки спокійно").
 _ALL_CLEAR_RE = re.compile(r"(наразі|поки|вже|зараз)\w*\s+\w*(чист|спокійн|тих)\w*")
+# Category 3: explicit no-threat statement ("без загроз", "відбій", "хибна тривога").
 _NO_THREAT_RE = re.compile(r"без\s+загроз|загроз\w*\s+нема|нема\w*\s+загроз|скасован|хибн|відбій")
-# "можливо"/"ризик" deliberately excluded — those also appear in genuine urgent warnings.
+# Category 4: if-then hypothetical. "можливо"/"ризик" excluded — those also appear in real warnings.
 _CONDITIONAL_RE = re.compile(r"\bякщо\b.*\bто\b")
 
 
@@ -69,8 +73,11 @@ def classify_window(
     threat_keywords: list[str],
     other_region_keywords: list[str],
 ) -> ClassificationResult | None:
+    """Priority 1: a single message with BOTH threat and location keywords always fires.
+    Priority 2: combine the whole window, unless one message names a different city."""
     texts = [_strip_footer(t) for t in texts]
 
+    # Drop long/negated messages before either check, so they can't slip through via the combined fallback.
     lowered_texts = [
         t.lower() for t in texts
         if len(t) <= MAX_ALERT_LENGTH and not _is_negated(t.lower())
