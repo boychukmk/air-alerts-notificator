@@ -1,7 +1,8 @@
 from pathlib import Path
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -50,7 +51,7 @@ class ChannelAddBody(BaseModel):
     input: str
 
 
-def current_phone(request: Request):
+def current_phone(request: Request) -> str | None:
     token = request.cookies.get(COOKIE_NAME)
     if not token:
         return None
@@ -68,19 +69,19 @@ def require_phone(request: Request) -> str:
 
 
 @app.get("/login")
-def login_page(request: Request):
+def login_page(request: Request) -> Response:
     return templates.TemplateResponse(request, "login.html", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/")
-def dashboard(request: Request):
+def dashboard(request: Request) -> Response:
     if not current_phone(request):
         return RedirectResponse("/login")
     return templates.TemplateResponse(request, "dashboard.html", headers=NO_CACHE_HEADERS)
 
 
 @app.post("/api/login")
-async def api_login(body: LoginBody):
+async def api_login(body: LoginBody) -> JSONResponse:
     phone = "".join(ch for ch in body.phone if ch.isdigit())
 
     user = store.get_user(phone)
@@ -95,7 +96,7 @@ async def api_login(body: LoginBody):
 
 
 @app.post("/api/logout")
-async def api_logout(request: Request):
+async def api_logout(request: Request) -> JSONResponse:
     token = request.cookies.get(COOKIE_NAME)
     if token:
         store.delete_session(token)
@@ -105,42 +106,42 @@ async def api_logout(request: Request):
 
 
 @app.get("/api/state")
-async def api_state(phone: str = Depends(require_phone)):
+async def api_state(phone: str = Depends(require_phone)) -> dict[str, Any]:
     return store.get_state()
 
 
 @app.post("/api/region")
-async def api_region(body: RegionBody, phone: str = Depends(require_phone)):
+async def api_region(body: RegionBody, phone: str = Depends(require_phone)) -> dict[str, Any]:
     store.set_region_enabled(body.region, body.enabled)
     return {"ok": True}
 
 
 @app.post("/api/threat")
-async def api_threat(body: ThreatBody, phone: str = Depends(require_phone)):
+async def api_threat(body: ThreatBody, phone: str = Depends(require_phone)) -> dict[str, Any]:
     store.set_threat_type_enabled(body.key, body.enabled)
     return {"ok": True}
 
 
 @app.post("/api/threat/keyword/add")
-async def api_threat_keyword_add(body: ThreatKeywordBody, phone: str = Depends(require_phone)):
+async def api_threat_keyword_add(body: ThreatKeywordBody, phone: str = Depends(require_phone)) -> dict[str, Any]:
     store.add_threat_keyword(body.key, body.keyword)
     return {"ok": True}
 
 
 @app.post("/api/threat/keyword/remove")
-async def api_threat_keyword_remove(body: ThreatKeywordBody, phone: str = Depends(require_phone)):
+async def api_threat_keyword_remove(body: ThreatKeywordBody, phone: str = Depends(require_phone)) -> dict[str, Any]:
     store.remove_threat_keyword(body.key, body.keyword)
     return {"ok": True}
 
 
 @app.post("/api/channel")
-async def api_channel(body: ChannelBody, phone: str = Depends(require_phone)):
+async def api_channel(body: ChannelBody, phone: str = Depends(require_phone)) -> dict[str, Any]:
     store.set_channel_enabled(body.key, body.enabled)
     return {"ok": True}
 
 
-@app.post("/api/channels/add")
-async def api_channels_add(body: ChannelAddBody, phone: str = Depends(require_phone)):
+@app.post("/api/channels/add", response_model=None)
+async def api_channels_add(body: ChannelAddBody, phone: str = Depends(require_phone)) -> JSONResponse | dict[str, Any]:
     raw = body.input.strip()
     if not raw:
         return JSONResponse({"error": "empty"}, status_code=400)
@@ -149,5 +150,5 @@ async def api_channels_add(body: ChannelAddBody, phone: str = Depends(require_ph
 
 
 @app.get("/api/channels/requests")
-async def api_channels_requests(phone: str = Depends(require_phone)):
+async def api_channels_requests(phone: str = Depends(require_phone)) -> list[dict[str, Any]]:
     return store.get_join_requests_recent(10)

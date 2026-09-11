@@ -5,7 +5,7 @@ import time
 class EventLog:
     """Audit log — written AFTER the alert is sent, never blocks the alert path."""
 
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str) -> None:
         self.conn = sqlite3.connect(db_path)
         self.conn.execute(
             """
@@ -22,7 +22,14 @@ class EventLog:
         )
         self.conn.commit()
 
-    def log(self, channel: str, text: str, matched_threats, matched_location, alerted: bool):
+    def log(
+        self,
+        channel: str,
+        text: str,
+        matched_threats: list[str] | None,
+        matched_location: list[str] | None,
+        alerted: bool,
+    ) -> None:
         self.conn.execute(
             "INSERT INTO events (ts, channel, text, matched_threats, matched_location, alerted) "
             "VALUES (?, ?, ?, ?, ?, ?)",

@@ -5,7 +5,7 @@ import time
 class InMemoryDedup:
     """Fast dedup, no DB round-trip on the hot path — pure in-process dict."""
 
-    def __init__(self, window_seconds: int):
+    def __init__(self, window_seconds: int) -> None:
         self.window_seconds = window_seconds
         self._seen: dict[str, float] = {}
 
@@ -25,7 +25,7 @@ class InMemoryDedup:
         self._seen[fp] = now
         return False
 
-    def _evict(self, now: float):
+    def _evict(self, now: float) -> None:
         cutoff = now - self.window_seconds
         stale = [fp for fp, ts in self._seen.items() if ts < cutoff]
         for fp in stale:

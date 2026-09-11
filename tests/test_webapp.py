@@ -5,9 +5,7 @@ import pytest
 
 from alertbot import settings_store as store
 
-# webapp.app calls store.init_db() at import time using settings_store.DB_PATH,
-# so the path must be redirected to a throwaway file BEFORE that first import —
-# otherwise it touches the real settings.db next to the source tree.
+# must be set before `from webapp.app import app` below, which calls store.init_db() on import
 store.DB_PATH = os.path.join(tempfile.mkdtemp(), "settings.db")
 
 from fastapi.testclient import TestClient  # noqa: E402

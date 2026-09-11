@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Any, TypedDict
 
 from telethon import events
 from telethon.errors import UserAlreadyParticipantError
@@ -9,7 +10,7 @@ from telethon.tl.functions.messages import ImportChatInviteRequest
 from alertbot import settings_store as store
 from alertbot.channel_input import parse_channel_input
 from alertbot.dedup import InMemoryDedup
-from alertbot.filters import classify_window
+from alertbot.filters import ClassificationResult, classify_window
 from alertbot.links import build_message_link
 from alertbot.notifier import send_alert_burst
 from alertbot.paths import DATA_DIR
@@ -23,21 +24,26 @@ REFRESH_SECONDS = 5
 GLOBAL_ALERT_COOLDOWN_SECONDS = 120
 
 
-class LiveConfig:
-    """Polls SQLite settings. Every ENABLED region is evaluated independently and in
-    parallel for each incoming message — Kyiv and Odesa and Khmelnytskyi can all be
-    live at once, each with its own keywords and its own ntfy topic."""
+class RegionConfig(TypedDict):
+    label: str
+    location_keywords: list[str]
+    other_region_keywords: list[str]
+    ntfy_topic: str
 
-    def __init__(self):
-        self.state = None
-        self.threat_keywords = []
-        self.enabled_channel_keys = set()
-        self.enabled_regions = {}
+
+class LiveConfig:
+    """Polls SQLite settings; every enabled region is evaluated independently per message."""
+
+    def __init__(self) -> None:
+        self.state: dict[str, Any] | None = None
+        self.threat_keywords: list[str] = []
+        self.enabled_channel_keys: set[str] = set()
+        self.enabled_regions: dict[str, RegionConfig] = {}
         self.ntfy_server = "https://ntfy.sh"
         self.ntfy_priority = "urgent"
         self.refresh()
 
-    def refresh(self):
+    def refresh(self) -> None:
         state = store.get_state()
         self.state = state
         self.ntfy_server = state["ntfy_server"]
@@ -66,7 +72,7 @@ class LiveConfig:
 
         self.enabled_channel_keys = {c["key"] for c in state["channels"] if c["enabled"]}
 
-    async def refresh_loop(self):
+    async def refresh_loop(self) -> None:
         while True:
             await asyncio.sleep(REFRESH_SECONDS)
             try:
@@ -75,7 +81,45 @@ class LiveConfig:
                 log.exception("config refresh failed")
 
 
-async def process_join_requests(client):
+class AlertAction(TypedDict):
+    region_key: str
+    region: RegionConfig
+    match: ClassificationResult
+    is_new_event: bool
+
+
+def evaluate_message(
+    text: str,
+    dedup: InMemoryDedup,
+    enabled_regions: dict[str, RegionConfig],
+    threat_keywords: list[str],
+    last_alert_monotonic: dict[str, float],
+    now: float,
+    cooldown_seconds: float = GLOBAL_ALERT_COOLDOWN_SECONDS,
+) -> list[AlertAction]:
+    """Pure — no network/DB I/O — so it's unit testable without a live Telethon client."""
+    if not text or dedup.is_duplicate(text):
+        return []
+
+    actions: list[AlertAction] = []
+    for region_key, region in enabled_regions.items():
+        match = classify_window(
+            [text], region["location_keywords"], threat_keywords, region["other_region_keywords"]
+        )
+        if not match:
+            continue
+
+        last = last_alert_monotonic.get(region_key, -1e9)
+        is_new_event = (now - last) > cooldown_seconds
+        if is_new_event:
+            last_alert_monotonic[region_key] = now
+
+        actions.append({"region_key": region_key, "region": region, "match": match, "is_new_event": is_new_event})
+
+    return actions
+
+
+async def process_join_requests(client: Any) -> None:
     while True:
         await asyncio.sleep(5)
         try:
@@ -103,7 +147,7 @@ async def process_join_requests(client):
             log.exception("join request loop error")
 
 
-async def main():
+async def main() -> None:
     store.init_db()
     live = LiveConfig()
 
@@ -115,17 +159,12 @@ async def main():
     event_log = EventLog(str(DATA_DIR / "events.db"))
 
     client = make_client()
-    background_tasks = set()
+    background_tasks: set[asyncio.Task] = set()
 
-    # Per-region cooldown: if 6 channels all confirm the same launch toward the SAME
-    # city within seconds of each other, that's one event, not six bursts. A launch
-    # toward a different city at the same time is independent and still fires.
     last_alert_monotonic: dict[str, float] = {}
 
-    # No chats= filter — listen to everything the account is a member of,
-    # then check membership against the live enabled-channel set per message.
     @client.on(events.NewMessage())
-    async def handler(event):
+    async def handler(event: Any) -> None:
         chat = await event.get_chat()
         chat_key = getattr(chat, "username", None) or str(event.chat_id)
 
@@ -133,32 +172,20 @@ async def main():
             return
 
         text = event.raw_text or ""
-        if not text:
-            return
-
         channel_label = getattr(chat, "username", None) or getattr(chat, "title", None) or str(event.chat_id)
         message_link = build_message_link(chat, event.message.id)
 
-        if dedup.is_duplicate(text):
-            return
+        now = asyncio.get_event_loop().time()
+        actions = evaluate_message(
+            text, dedup, live.enabled_regions, live.threat_keywords, last_alert_monotonic, now
+        )
 
-        # Cross-message combining ("Балістика" + separate "Курс на Київ") was tried
-        # and reverted — on busy channels it kept stitching together unrelated posts
-        # (e.g. a Poltava-only report + an unrelated nearby "Київ" mention), producing
-        # false alerts. Threat + location must now be in the SAME message.
-        for region_key, region in live.enabled_regions.items():
-            match = classify_window(
-                [text], region["location_keywords"], live.threat_keywords, region["other_region_keywords"]
+        for action in actions:
+            region_key, region, match, is_new_event = (
+                action["region_key"], action["region"], action["match"], action["is_new_event"]
             )
-            if not match:
-                continue
-
-            now = asyncio.get_event_loop().time()
-            last = last_alert_monotonic.get(region_key, -1e9)
-            is_new_event = (now - last) > GLOBAL_ALERT_COOLDOWN_SECONDS
 
             if is_new_event:
-                last_alert_monotonic[region_key] = now
                 task = asyncio.create_task(
                     send_alert_burst(
                         live.ntfy_server, region["ntfy_topic"], live.ntfy_priority,

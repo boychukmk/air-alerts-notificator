@@ -14,8 +14,6 @@ def classify(text):
     return classify_window([text], LOCATION_KEYWORDS, THREAT_KEYWORDS, OTHER_REGION_KEYWORDS)
 
 
-# Real alerts pulled from events.db during the 2026-09-08 mass attack — these
-# must keep firing. Every filter change should be checked against this list.
 REAL_ALERTS = [
     "Також балістика на Київ, загалом 6 цілей! Будьте в укритті.",
     "Ще балістика на Київ.",
@@ -34,8 +32,6 @@ REAL_ALERTS = [
     "Через Білу Церкву на Київ балістика.",
 ]
 
-# Messages that contain both a threat and a location keyword but must NOT alert —
-# each one caused a real false positive at some point in production.
 FALSE_POSITIVES = [
     # all-clear state, various phrasing
     "По крилатим над Києвом наразі чисто, доволі багато збили наші хлопці сьогодні.",
@@ -58,7 +54,6 @@ LONG_SUMMARY = (
     "Не варто нехтувати сигналами тривоги навіть під час повторних або короткотривалих сповіщень."
 )
 
-# Footer/cross-promo lines must not create false matches for other cities.
 FOOTER_CASES = [
     "Балістика на Дніпро.\n💙 Дніпро Alerts • 💛 Київ Alerts",
     "Ракета на Одесу.\nhttps://t.me/some_channel",
@@ -81,7 +76,6 @@ def test_long_summary_blocked():
 
 @pytest.mark.parametrize("text", FOOTER_CASES)
 def test_footer_does_not_leak_other_city_keywords(text):
-    # None of these mention Kyiv/Chernihiv/etc outside the footer, so they must not alert.
     assert classify(text) is None
 
 

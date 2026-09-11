@@ -96,7 +96,6 @@ def test_session_expires_after_max_age(monkeypatch):
     assert store.get_session("tok123") is None
 
     monkeypatch.undo()
-    # expired session was deleted on lookup, not just hidden
     c = store._conn()
     row = c.execute("SELECT * FROM sessions WHERE token=?", ("tok123",)).fetchone()
     c.close()

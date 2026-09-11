@@ -1,10 +1,8 @@
 import re
 
 
-def parse_channel_input(raw: str):
-    """Accepts @username, bare username, https://t.me/username,
-    https://t.me/+HASH or https://t.me/joinchat/HASH invite links.
-    Returns ("invite", hash) or ("username", name)."""
+def parse_channel_input(raw: str) -> tuple[str, str]:
+    """Returns ("invite", hash) or ("username", name)."""
     s = raw.strip()
 
     s = re.sub(r"^https?://(www\.)?t\.me/", "", s, flags=re.IGNORECASE)

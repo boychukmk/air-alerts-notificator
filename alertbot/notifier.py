@@ -10,7 +10,7 @@ _client = httpx.AsyncClient(timeout=5.0)
 async def send_alert(
     ntfy_server: str, ntfy_topic: str, priority: str, region_label: str, channel_name: str, text: str,
     link: str | None = None, seq: int | None = None,
-):
+) -> None:
     url = f"{ntfy_server}/{ntfy_topic}"
 
     title = f"Загроза: {region_label}" + (f" ({seq})" if seq else "")
@@ -22,7 +22,7 @@ async def send_alert(
         "Tags": "rotating_light",
     }
     if link:
-        headers["Click"] = link.encode("utf-8")  # tapping the notification opens the source message
+        headers["Click"] = link.encode("utf-8")
         body += f"\n\n{link}"
 
     await _client.post(url, content=body.encode("utf-8"), headers=headers)
@@ -31,9 +31,7 @@ async def send_alert(
 async def send_alert_burst(
     ntfy_server: str, ntfy_topic: str, priority: str, region_label: str, channel_name: str, text: str,
     link: str | None = None, count: int = 10, interval_seconds: float = 1.0,
-):
-    """Fires `count` notifications spaced out, so iOS doesn't collapse them into one
-    silent group — acts like a repeating alarm until the person notices."""
+) -> None:
     for i in range(1, count + 1):
         try:
             await send_alert(ntfy_server, ntfy_topic, priority, region_label, channel_name, text, link=link, seq=i)
