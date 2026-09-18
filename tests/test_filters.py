@@ -5,11 +5,10 @@ from alertbot.filters import classify_window
 TARGET_KEYWORDS = ["київ", "києва", "києву", "києвом", "київщин", "столиц"]
 TRANSIT_KEYWORDS = ["чернігівщин", "сумщин", "полтавщин", "черкащин"]
 THREAT_KEYWORDS = ["балістик", "крилат", "ракет", "калібр"]
-OTHER_REGION_KEYWORDS = ["дніпро", "одеса", "хмельницьк"]
 
 
 def classify(text):
-    return classify_window([text], TARGET_KEYWORDS, TRANSIT_KEYWORDS, THREAT_KEYWORDS, OTHER_REGION_KEYWORDS)
+    return classify_window(text, TARGET_KEYWORDS, TRANSIT_KEYWORDS, THREAT_KEYWORDS)
 
 
 REAL_ALERTS = [

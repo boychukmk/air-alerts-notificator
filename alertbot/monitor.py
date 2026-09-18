@@ -38,7 +38,6 @@ class RegionConfig(TypedDict):
     label: str
     target_keywords: list[str]
     transit_keywords: list[str]
-    other_region_keywords: list[str]
     ntfy_topic: str
 
 
@@ -70,15 +69,10 @@ class LiveConfig:
         self.enabled_regions = {}
         for key in enabled_region_keys:
             r = state["regions"][key]
-            other = []
-            for other_key, other_r in state["regions"].items():
-                if other_key != key:
-                    other.extend(other_r["target_keywords"])
             self.enabled_regions[key] = {
                 "label": r["label"],
                 "target_keywords": r["target_keywords"],
                 "transit_keywords": r["transit_keywords"],
-                "other_region_keywords": other,
                 "ntfy_topic": r["ntfy_topic"],
             }
 
@@ -115,10 +109,7 @@ def evaluate_message(
 
     actions: list[AlertAction] = []
     for region_key, region in enabled_regions.items():
-        match = classify_window(
-            [text], region["target_keywords"], region["transit_keywords"],
-            threat_keywords, region["other_region_keywords"]
-        )
+        match = classify_window(text, region["target_keywords"], region["transit_keywords"], threat_keywords)
         if not match:
             continue
 

@@ -5,32 +5,6 @@ from typing import TypedDict
 class ClassificationResult(TypedDict):
     matched_threats: list[str]
     matched_location: list[str]
-    combined: bool
-
-
-def build_active_keywords(config: dict) -> tuple[list[str], list[str], list[str]]:
-    region = config["regions"][config["active_region"]]
-
-    threat_keywords = []
-    for _, t in config["threat_types"].items():
-        if t.get("enabled"):
-            threat_keywords.extend(t["keywords"])
-
-    return region["target_keywords"], region["transit_keywords"], threat_keywords
-
-
-def build_other_region_keywords(config: dict) -> list[str]:
-    other = []
-    for name, region in config["regions"].items():
-        if name == config["active_region"]:
-            continue
-        other.extend(region["target_keywords"])
-    return other
-
-
-def _find_matches(text: str, keywords) -> list[str]:
-    lowered = text.lower()
-    return [kw for kw in keywords if kw in lowered]
 
 
 MAX_ALERT_LENGTH = 200
@@ -113,40 +87,23 @@ def _location_matches(text: str, target_keywords: list[str], transit_keywords: l
 
 
 def classify_window(
-    texts: list[str],
+    text: str,
     target_keywords: list[str],
     transit_keywords: list[str],
     threat_keywords: list[str],
-    other_region_keywords: list[str],
 ) -> ClassificationResult | None:
-    """Priority 1: a single message with BOTH threat and location keywords always fires.
-    Priority 2: combine the whole window, unless one message names a different city."""
-    texts = [_strip_footer(t) for t in texts]
-
-    # Drop long/negated messages before either check, so they can't slip through via the combined fallback.
-    lowered_texts = [
-        t.lower() for t in texts
-        if len(t) <= MAX_ALERT_LENGTH and not _should_exclude(t.lower())
-    ]
-    if not lowered_texts:
+    """Fires only when a single message names both a threat and a location."""
+    text = _strip_footer(text)
+    if len(text) > MAX_ALERT_LENGTH:
         return None
 
-    for t in lowered_texts:
-        threats = [kw for kw in threat_keywords if kw in t]
-        locs = _location_matches(t, target_keywords, transit_keywords)
-        if threats and locs:
-            return {"matched_threats": threats, "matched_location": locs, "combined": False}
-
-    conflict = any(
-        any(kw in t for kw in other_region_keywords) for t in lowered_texts
-    )
-    if conflict:
+    lowered = text.lower()
+    if _should_exclude(lowered):
         return None
 
-    combined = " ".join(lowered_texts)
-    threats = [kw for kw in threat_keywords if kw in combined]
-    locs = _location_matches(combined, target_keywords, transit_keywords)
+    threats = [kw for kw in threat_keywords if kw in lowered]
+    locs = _location_matches(lowered, target_keywords, transit_keywords)
     if threats and locs:
-        return {"matched_threats": threats, "matched_location": locs, "combined": True}
+        return {"matched_threats": threats, "matched_location": locs}
 
     return None
