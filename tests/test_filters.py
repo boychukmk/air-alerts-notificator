@@ -45,6 +45,19 @@ FALSE_POSITIVES = [
     "Якщо калібри атакуватимуть Київ, то буде великий шанс комбінованого удару разом з балістикою.",
     # cancellation / false alarm
     "Балістика на Київ скасована, це була хибна тривога.",
+    # donation appeal riding on threat+location keywords (real message from events.db)
+    "Виходи з Брянська \n\nПідтримати канал, буду вдячний Вам:\n\nhttps://base.monobank.ua/4jYdAKEbmcrmLL",
+    # cross-promotion of another channel/person, not a report of this event
+    "❗️Друзі, одним з перших про рух балістики повідомляє наш колега, військовий ППО «Радник»: @radnyk\n\n"
+    "Він вже попередив про всі останні обстріли Києва та області.",
+    # retrospective news about an already-completed strike, not an in-progress threat
+    "російські покидьки вдарили по багатоповерхівці в Одесі. Наразі відомо про 12 постраждалих. "
+    "Ракети йшли дуже низько. Порядка 20м по показниках.",
+    "Сьогодні РФ ракетами знищила сортувальний центр мережі магазинів «EVA» в Одесі.",
+    # forecast/speculative risk for later, not a launch happening now
+    "Рідні, для Київщини цієї ночі прогнозують підвищену небезпеку через можливе застосування балістики, "
+    "я буду на звʼязку з вами.",
+    "⚡️Ворог планує атакувати Одещину найближчими двома добами балістикою та ракетами онікс.",
 ]
 
 # Long recap/summary posts must not alert regardless of keyword hits.

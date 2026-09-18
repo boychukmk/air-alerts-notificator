@@ -46,14 +46,37 @@ _ALL_CLEAR_RE = re.compile(r"(наразі|поки|вже|зараз)\w*\s+\w*(
 _NO_THREAT_RE = re.compile(r"без\s+загроз|загроз\w*\s+нема|нема\w*\s+загроз|скасован|хибн|відбій")
 # Category 4: if-then hypothetical. "можливо"/"ризик" excluded — those also appear in real warnings.
 _CONDITIONAL_RE = re.compile(r"\bякщо\b.*\bто\b")
+# Category 5: fundraising/donation appeal riding along on threat+location keywords.
+_DONATION_RE = re.compile(
+    r"monobank|privat24|patreon|buymeacoffee|підтримати\s+канал|буду\s+вдячн|"
+    r"перекаж\w*\s+(грош|кошт|донат)|\bдонат"
+)
+# Category 6: cross-promotion of another channel/person, not a report of this event.
+_CROSS_PROMO_RE = re.compile(
+    r"(колег|рекоменду|підпиш\w*ся|підписуйтесь|приєднуйтесь)\w*[\s\S]{0,80}@\w+"
+    r"|@\w+[\s\S]{0,80}(колег|рекоменду|підпиш\w*ся|підписуйтесь|приєднуйтесь)\w*"
+)
+# Shared by categories 7-8: any of these means "happening right now" — never
+# exclude a message that has one, even if it also reads like news or a forecast.
+_CURRENT_ACTION_RE = re.compile(r"\bзараз\b|\bвже\b|за\s+\d+\s*хв|летит\w*|наближ\w*|\bкурс\b")
+# Category 7: reporting an already-completed strike (news, not an in-progress threat).
+_PAST_DAMAGE_RE = re.compile(r"вдарил\w*|знищил\w*|поранен\w*|загинул\w*|постраждал\w*|зруйнован\w*")
+# Category 8: forecast/speculative risk for later, not a launch happening now.
+_FORECAST_RE = re.compile(
+    r"прогнозу\w*|плану\w*\s+атакувати|можлив\w*\s+застосуванн\w*|найближч\w*\s*(добами|годин\w*|дні)"
+)
 
 
-def _is_negated(lowered_text: str) -> bool:
+def _should_exclude(lowered_text: str) -> bool:
     return bool(
         _NEGATED_VERB_RE.search(lowered_text)
         or _ALL_CLEAR_RE.search(lowered_text)
         or _NO_THREAT_RE.search(lowered_text)
         or _CONDITIONAL_RE.search(lowered_text)
+        or _DONATION_RE.search(lowered_text)
+        or _CROSS_PROMO_RE.search(lowered_text)
+        or (_PAST_DAMAGE_RE.search(lowered_text) and not _CURRENT_ACTION_RE.search(lowered_text))
+        or (_FORECAST_RE.search(lowered_text) and not _CURRENT_ACTION_RE.search(lowered_text))
     )
 
 
@@ -80,7 +103,7 @@ def classify_window(
     # Drop long/negated messages before either check, so they can't slip through via the combined fallback.
     lowered_texts = [
         t.lower() for t in texts
-        if len(t) <= MAX_ALERT_LENGTH and not _is_negated(t.lower())
+        if len(t) <= MAX_ALERT_LENGTH and not _should_exclude(t.lower())
     ]
     if not lowered_texts:
         return None
