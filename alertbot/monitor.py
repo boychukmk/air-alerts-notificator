@@ -132,10 +132,12 @@ async def process_join_requests(client: Any) -> None:
                 try:
                     if kind == "invite":
                         result = await client(ImportChatInviteRequest(value))
-                        chat = result.chats[0]
                     else:
                         result = await client(JoinChannelRequest(value))
-                        chat = result.chats[0]
+                    # Newer Telegram API layers wrap the Updates in messages.ChatInviteJoinResultOk
+                    # instead of returning it directly — .chats lives one level deeper there.
+                    chats = getattr(result, "chats", None) or result.updates.chats
+                    chat = chats[0]
 
                     key = getattr(chat, "username", None) or str(chat.id)
                     label = getattr(chat, "title", None) or key
