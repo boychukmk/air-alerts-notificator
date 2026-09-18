@@ -8,16 +8,15 @@ class ClassificationResult(TypedDict):
     combined: bool
 
 
-def build_active_keywords(config: dict) -> tuple[list[str], list[str]]:
+def build_active_keywords(config: dict) -> tuple[list[str], list[str], list[str]]:
     region = config["regions"][config["active_region"]]
-    location_keywords = region["target_keywords"] + region["transit_keywords"]
 
     threat_keywords = []
     for _, t in config["threat_types"].items():
         if t.get("enabled"):
             threat_keywords.extend(t["keywords"])
 
-    return location_keywords, threat_keywords
+    return region["target_keywords"], region["transit_keywords"], threat_keywords
 
 
 def build_other_region_keywords(config: dict) -> list[str]:
@@ -80,6 +79,25 @@ def _should_exclude(lowered_text: str) -> bool:
     )
 
 
+def _effective_transit_matches(lowered_text: str, transit_keywords: list[str]) -> list[str]:
+    """A transit region only counts as "on the way to us" when the wording says
+    passage ("через"/"повз"/"межу"). "на <transit region>" names it as someone
+    else's actual target, not a waypoint — e.g. "ракети на Полтавщину" is a
+    Poltava-bound strike, not a sign anything is headed further to Kyiv."""
+    matches = []
+    for kw in transit_keywords:
+        if kw not in lowered_text:
+            continue
+        targeting = re.search(r"\bна\s+\w*" + re.escape(kw) + r"\w*|\bкурс\s+на\s+\w*" + re.escape(kw) + r"\w*"
+                               r"|\bу\s+бік\s+\w*" + re.escape(kw) + r"\w*", lowered_text)
+        passage = re.search(r"\bчерез\s+\w*" + re.escape(kw) + r"\w*|\bповз\s+\w*" + re.escape(kw) + r"\w*"
+                             r"|\bмежу\s+\w*" + re.escape(kw) + r"\w*", lowered_text)
+        if targeting and not passage:
+            continue
+        matches.append(kw)
+    return matches
+
+
 FOOTER_LINE_MARKERS = ["•", "http://", "https://", "t.me/"]
 
 
@@ -90,9 +108,14 @@ def _strip_footer(text: str) -> str:
     )
 
 
+def _location_matches(text: str, target_keywords: list[str], transit_keywords: list[str]) -> list[str]:
+    return [kw for kw in target_keywords if kw in text] + _effective_transit_matches(text, transit_keywords)
+
+
 def classify_window(
     texts: list[str],
-    location_keywords: list[str],
+    target_keywords: list[str],
+    transit_keywords: list[str],
     threat_keywords: list[str],
     other_region_keywords: list[str],
 ) -> ClassificationResult | None:
@@ -110,7 +133,7 @@ def classify_window(
 
     for t in lowered_texts:
         threats = [kw for kw in threat_keywords if kw in t]
-        locs = [kw for kw in location_keywords if kw in t]
+        locs = _location_matches(t, target_keywords, transit_keywords)
         if threats and locs:
             return {"matched_threats": threats, "matched_location": locs, "combined": False}
 
@@ -122,7 +145,7 @@ def classify_window(
 
     combined = " ".join(lowered_texts)
     threats = [kw for kw in threat_keywords if kw in combined]
-    locs = [kw for kw in location_keywords if kw in combined]
+    locs = _location_matches(combined, target_keywords, transit_keywords)
     if threats and locs:
         return {"matched_threats": threats, "matched_location": locs, "combined": True}
 

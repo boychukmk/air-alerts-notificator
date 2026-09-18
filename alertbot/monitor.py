@@ -36,7 +36,8 @@ async def heartbeat_loop() -> None:
 
 class RegionConfig(TypedDict):
     label: str
-    location_keywords: list[str]
+    target_keywords: list[str]
+    transit_keywords: list[str]
     other_region_keywords: list[str]
     ntfy_topic: str
 
@@ -75,7 +76,8 @@ class LiveConfig:
                     other.extend(other_r["target_keywords"])
             self.enabled_regions[key] = {
                 "label": r["label"],
-                "location_keywords": r["target_keywords"] + r["transit_keywords"],
+                "target_keywords": r["target_keywords"],
+                "transit_keywords": r["transit_keywords"],
                 "other_region_keywords": other,
                 "ntfy_topic": r["ntfy_topic"],
             }
@@ -114,7 +116,8 @@ def evaluate_message(
     actions: list[AlertAction] = []
     for region_key, region in enabled_regions.items():
         match = classify_window(
-            [text], region["location_keywords"], threat_keywords, region["other_region_keywords"]
+            [text], region["target_keywords"], region["transit_keywords"],
+            threat_keywords, region["other_region_keywords"]
         )
         if not match:
             continue

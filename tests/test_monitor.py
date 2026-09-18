@@ -5,13 +5,15 @@ THREAT_KEYWORDS = ["балістик", "ракет"]
 
 KYIV: dict = {
     "label": "Київ",
-    "location_keywords": ["київ"],
+    "target_keywords": ["київ"],
+    "transit_keywords": [],
     "other_region_keywords": ["дніпро"],
     "ntfy_topic": "alert-kyiv-test",
 }
 DNIPRO: dict = {
     "label": "Дніпро",
-    "location_keywords": ["дніпро"],
+    "target_keywords": ["дніпро"],
+    "transit_keywords": [],
     "other_region_keywords": ["київ"],
     "ntfy_topic": "alert-dnipro-test",
 }
